@@ -1,6 +1,6 @@
 import axios from 'axios'
 
-const BASE_URL = 'https://omonatserver.vercel.app'
+const BASE_URL = 'https://omonatserver.vercel.app/api'
 
 export const api = axios.create({
 	baseURL: BASE_URL,
@@ -8,7 +8,7 @@ export const api = axios.create({
 	headers: {
 		'Content-Type': 'application/json',
 	},
-	timeout: 10000,
+	timeout: 9000,
 })
 
 api.interceptors.response.use(
