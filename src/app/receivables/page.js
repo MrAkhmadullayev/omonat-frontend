@@ -39,6 +39,7 @@ import {
 	Banknote,
 	CalendarClock,
 	CreditCard,
+	Edit,
 	Eye,
 	LoaderIcon,
 	MoreHorizontal,
@@ -246,6 +247,16 @@ export default function ReceivablesPage() {
 								>
 									<Eye className='mr-2 h-4 w-4 text-muted-foreground' />{' '}
 									Batafsil ko'rish
+								</DropdownMenuItem>
+
+								<DropdownMenuItem
+									onClick={() =>
+										router.push(`/receivables/${item._id || item.id}/edit`)
+									}
+									className='cursor-pointer py-2 font-medium'
+								>
+									<Edit className='mr-2 h-4 w-4 text-muted-foreground' />{' '}
+									Tahrirlash
 								</DropdownMenuItem>
 								{item.status !== 'paid' && (
 									<>

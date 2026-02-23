@@ -34,6 +34,7 @@ import {
 	Banknote,
 	CalendarClock,
 	CreditCard,
+	Edit,
 	Eye,
 	LoaderIcon,
 	MoreHorizontal,
@@ -221,6 +222,16 @@ export default function DebtsPage() {
 								>
 									<Eye className='mr-2 h-4 w-4 text-blue-500' /> Batafsil
 									ko'rish
+								</DropdownMenuItem>
+
+								<DropdownMenuItem
+									onClick={() =>
+										router.push(`/debts/${debt._id || debt.id}/edit`)
+									}
+									className='cursor-pointer py-2 font-medium'
+								>
+									<Edit className='mr-2 h-4 w-4 text-muted-foreground' />{' '}
+									Tahrirlash
 								</DropdownMenuItem>
 								{debt.status !== 'paid' && (
 									<>

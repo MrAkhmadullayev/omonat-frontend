@@ -45,6 +45,7 @@ import {
 	Calendar,
 	Car,
 	CreditCard,
+	Edit,
 	Eye,
 	Filter,
 	Home,
@@ -394,6 +395,17 @@ export default function ExpensesPage() {
 																>
 																	<Eye className='mr-2 h-4 w-4 text-muted-foreground' />{' '}
 																	Batafsil ko'rish
+																</DropdownMenuItem>
+																<DropdownMenuItem
+																	onClick={() =>
+																		router.push(
+																			`/expenses/${exp._id || exp.id}/edit`,
+																		)
+																	}
+																	className='cursor-pointer py-2 font-medium'
+																>
+																	<Edit className='mr-2 h-4 w-4 text-muted-foreground' />{' '}
+																	Tahrirlash
 																</DropdownMenuItem>
 																<DropdownMenuSeparator />
 																<DropdownMenuItem
