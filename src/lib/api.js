@@ -1,6 +1,6 @@
 import axios from 'axios'
 
-const BASE_URL = 'http://localhost:2026/api'
+const BASE_URL = 'https://omonatserver.vercel.app'
 
 export const api = axios.create({
 	baseURL: BASE_URL,
