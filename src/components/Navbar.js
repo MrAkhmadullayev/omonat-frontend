@@ -29,6 +29,7 @@ import {
 	LogOut,
 	Menu,
 	Receipt,
+	ShieldCheck,
 	UserCircle,
 	Wallet,
 } from 'lucide-react'
@@ -42,6 +43,14 @@ const menuItems = [
 ]
 
 export default function Navbar({ user }) {
+	const currentMenuItems = [...menuItems]
+	if (user?.isAdmin) {
+		currentMenuItems.unshift({
+			name: 'Admin Panel',
+			icon: ShieldCheck,
+			href: '/admin',
+		})
+	}
 	const pathname = usePathname()
 	const [isSheetOpen, setIsSheetOpen] = useState(false)
 	const [isLoggingOut, setIsLoggingOut] = useState(false)
@@ -97,7 +106,7 @@ export default function Navbar({ user }) {
 								</SheetHeader>
 
 								<nav className='grid gap-2'>
-									{menuItems.map((item, index) => {
+									{currentMenuItems.map((item, index) => {
 										const Icon = item.icon
 										const isActive = pathname === item.href
 

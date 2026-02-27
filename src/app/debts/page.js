@@ -264,7 +264,7 @@ export default function DebtsPage() {
 						<Button
 							variant='outline'
 							size='icon'
-							className='rounded-xl shadow-sm hover:bg-muted'
+							className='shadow-sm hover:bg-muted'
 							onClick={() => router.push('/')}
 						>
 							<ArrowLeft className='h-5 w-5' />
@@ -279,7 +279,7 @@ export default function DebtsPage() {
 						</div>
 					</div>
 					<Button
-						className='w-full md:w-auto rounded-xl shadow-md gap-2 h-11'
+						className='w-full md:w-auto shadow-md gap-2'
 						onClick={() => router.push('/debts/add')}
 					>
 						<Plus className='h-5 w-5' /> Yangi qarz qo'shish
@@ -368,7 +368,7 @@ export default function DebtsPage() {
 							<Input
 								type='search'
 								placeholder="Kreditor bo'yicha qidirish..."
-								className='pl-10 h-11 rounded-xl bg-background border-border/50 shadow-sm transition-colors hover:bg-accent/10 focus-visible:bg-background'
+								className='pl-10 h-10 bg-background border-border/50 shadow-sm transition-colors hover:bg-accent/10 focus-visible:bg-background'
 								value={searchQuery}
 								onChange={e => setSearchQuery(e.target.value)}
 							/>
@@ -379,8 +379,8 @@ export default function DebtsPage() {
 						value='active'
 						className='mt-0 focus-visible:outline-none focus-visible:ring-0'
 					>
-						<Card className='border-border/50 shadow-sm overflow-hidden'>
-							<CardContent className='p-4 sm:p-6'>
+						<Card className='border-border/50 shadow-sm overflow-hidden p-0'>
+							<CardContent className='p-0'>
 								<div className='rounded-md border overflow-x-auto'>
 									<Table>
 										<TableHeader className='bg-muted/30'>
@@ -413,7 +413,7 @@ export default function DebtsPage() {
 						className='mt-0 focus-visible:outline-none focus-visible:ring-0'
 					>
 						<Card className='border-border/50 shadow-sm overflow-hidden opacity-90'>
-							<CardContent className='p-4 sm:p-6'>
+							<CardContent className=''>
 								<div className='rounded-md border overflow-x-auto'>
 									<Table>
 										<TableHeader className='bg-muted/30'>

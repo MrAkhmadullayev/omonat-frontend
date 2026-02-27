@@ -292,7 +292,7 @@ export default function ReceivablesPage() {
 						<Button
 							variant='outline'
 							size='icon'
-							className='rounded-xl shadow-sm hover:bg-muted transition-colors'
+							className='shadow-sm hover:bg-muted transition-colors'
 							onClick={() => router.push('/')}
 						>
 							<ArrowLeft className='h-5 w-5' />
@@ -307,7 +307,7 @@ export default function ReceivablesPage() {
 						</div>
 					</div>
 					<Button
-						className='w-full md:w-auto rounded-xl shadow-md gap-2 h-11 transition-all font-bold'
+						className='w-full md:w-auto shadow-md gap-2  transition-all font-bold'
 						onClick={() => router.push('/receivables/add')}
 					>
 						<Plus className='h-5 w-5' /> Yangi haq qo'shish
@@ -402,7 +402,7 @@ export default function ReceivablesPage() {
 							<Input
 								type='search'
 								placeholder="Ism bo'yicha qidirish..."
-								className='pl-11 h-12 rounded-xl bg-background border-border/50 shadow-sm transition-all hover:bg-accent/10 focus-visible:bg-background focus-visible:ring-primary font-medium'
+								className='pl-11 h-10 rounded-xl bg-background border-border/50 shadow-sm transition-all hover:bg-accent/10 focus-visible:bg-background focus-visible:ring-primary font-medium'
 								value={searchQuery}
 								onChange={e => setSearchQuery(e.target.value)}
 							/>
@@ -413,8 +413,8 @@ export default function ReceivablesPage() {
 						value='active'
 						className='mt-0 focus-visible:outline-none focus-visible:ring-0'
 					>
-						<Card className='border-border/50 shadow-sm overflow-hidden bg-background/60 backdrop-blur-sm'>
-							<CardContent className='p-4 sm:p-6'>
+						<Card className='border-border/50 shadow-sm overflow-hidden bg-background/60 backdrop-blur-sm p-0'>
+							<CardContent className='p-0'>
 								<div className='rounded-xl border border-border/50 overflow-x-auto bg-background'>
 									<Table>
 										<TableHeader className='bg-muted/30'>
@@ -456,8 +456,8 @@ export default function ReceivablesPage() {
 						value='paid'
 						className='mt-0 focus-visible:outline-none focus-visible:ring-0'
 					>
-						<Card className='border-border/50 shadow-sm overflow-hidden opacity-90 bg-background/60 backdrop-blur-sm'>
-							<CardContent className='p-4 sm:p-6'>
+						<Card className='border-border/50 shadow-sm overflow-hidden opacity-90 bg-background/60 backdrop-blur-sm p-0'>
+							<CardContent className='p-0'>
 								<div className='rounded-xl border border-border/50 overflow-x-auto bg-background'>
 									<Table>
 										<TableHeader className='bg-muted/30'>

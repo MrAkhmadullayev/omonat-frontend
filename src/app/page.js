@@ -1,6 +1,6 @@
 'use client'
 
-import { format, isSameMonth, subMonths } from 'date-fns'
+import { format } from 'date-fns'
 import { uz } from 'date-fns/locale'
 import Link from 'next/link'
 import { usePathname, useRouter } from 'next/navigation'
@@ -17,7 +17,7 @@ import {
 import useSWR from 'swr'
 
 import { useUser } from '@/hooks/useUser'
-import { authApi, debtApi, expenseApi, receivableApi } from '@/lib/api'
+import { authApi, dashboardApi } from '@/lib/api'
 
 import { Avatar, AvatarFallback } from '@/components/ui/avatar'
 import { Button } from '@/components/ui/button'
@@ -53,6 +53,7 @@ import {
 	LogOut,
 	Menu,
 	Receipt,
+	ShieldCheck,
 	UserCircle,
 	Wallet,
 } from 'lucide-react'
@@ -63,77 +64,6 @@ const formatMoney = amount => {
 		currency: 'UZS',
 		maximumFractionDigits: 0,
 	}).format(amount)
-}
-
-const fetchDashboardStats = async () => {
-	const [debts, receivables, expenses] = await Promise.all([
-		debtApi.getAll(),
-		receivableApi.getAll(),
-		expenseApi.getAll(),
-	])
-
-	const activeDebts = debts
-		.filter(d => d.status !== 'paid')
-		.reduce((sum, d) => sum + (d.amount - d.paidAmount), 0)
-	const activeReceivables = receivables
-		.filter(r => r.status !== 'paid')
-		.reduce((sum, r) => sum + (r.amount - r.receivedAmount), 0)
-
-	const currentDate = new Date()
-	const monthlyExpenses = expenses
-		.filter(e => isSameMonth(new Date(e.date), currentDate))
-		.reduce((sum, e) => sum + e.amount, 0)
-
-	const rawActivities = [
-		...debts.map(d => ({
-			id: d._id,
-			title: d.creditorName,
-			amount: d.amount,
-			date: d.createdAt,
-			type: 'debt',
-		})),
-		...receivables.map(r => ({
-			id: r._id,
-			title: r.debtor,
-			amount: r.amount,
-			date: r.createdAt,
-			type: 'receivable',
-		})),
-		...expenses.map(e => ({
-			id: e._id,
-			title: e.title,
-			amount: e.amount,
-			date: e.date,
-			type: 'expense',
-		})),
-	]
-
-	const recentActivities = rawActivities
-		.filter(a => isSameMonth(new Date(a.date), currentDate))
-		.sort((a, b) => new Date(b.date) - new Date(a.date))
-		.slice(0, 5)
-
-	const chartData = Array.from({ length: 6 }).map((_, i) => {
-		const d = subMonths(currentDate, 5 - i)
-		const monthStr = format(d, 'MMM', { locale: uz })
-
-		const monthExpenses = expenses
-			.filter(e => isSameMonth(new Date(e.date), d))
-			.reduce((sum, e) => sum + e.amount, 0)
-		const monthReceivables = receivables
-			.filter(r => isSameMonth(new Date(r.createdAt), d))
-			.reduce((sum, r) => sum + r.amount, 0)
-
-		return { name: monthStr, Chiqim: monthExpenses, Kirim: monthReceivables }
-	})
-
-	return {
-		activeDebts,
-		activeReceivables,
-		monthlyExpenses,
-		recentActivities,
-		chartData,
-	}
 }
 
 const menuItems = [
@@ -155,7 +85,7 @@ export default function Home() {
 		data: stats,
 		error: statsError,
 		isLoading: isStatsLoading,
-	} = useSWR(user ? '/dashboard/stats' : null, fetchDashboardStats)
+	} = useSWR(user ? '/dashboard/stats' : null, () => dashboardApi.getStats())
 
 	useEffect(() => {
 		if (isError) router.push('/authentication/login')
@@ -236,6 +166,16 @@ export default function Home() {
 								</SheetHeader>
 
 								<nav className='grid gap-2'>
+									{user?.isAdmin && (
+										<Link
+											href='/admin'
+											onClick={() => setIsSheetOpen(false)}
+											className='flex items-center gap-4 rounded-xl px-4 py-3 text-sm font-semibold transition-all duration-200 text-muted-foreground hover:bg-muted hover:text-foreground'
+										>
+											<ShieldCheck className='h-5 w-5' />
+											Admin Panel
+										</Link>
+									)}
 									{menuItems.map((item, index) => {
 										const Icon = item.icon
 										const isActive = pathname === item.href

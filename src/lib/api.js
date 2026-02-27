@@ -1,6 +1,7 @@
 import axios from 'axios'
 
 const BASE_URL = '/api'
+// const BASE_URL = 'http://localhost:2026/api'
 
 export const api = axios.create({
 	baseURL: BASE_URL,
@@ -49,6 +50,8 @@ export const debtApi = {
 	delete: id => api.delete(`/debts/${id}`).then(res => res.data),
 	pay: (id, paymentData) =>
 		api.post(`/debts/${id}/pay`, paymentData).then(res => res.data),
+	deleteHistory: (id, historyId) =>
+		api.delete(`/debts/${id}/history/${historyId}`).then(res => res.data),
 }
 
 export const receivableApi = {
@@ -60,6 +63,8 @@ export const receivableApi = {
 	delete: id => api.delete(`/receivables/${id}`).then(res => res.data),
 	receivePayment: (id, paymentData) =>
 		api.post(`/receivables/${id}/pay`, paymentData).then(res => res.data),
+	deleteHistory: (id, historyId) =>
+		api.delete(`/receivables/${id}/history/${historyId}`).then(res => res.data),
 }
 
 export const expenseApi = {
@@ -68,4 +73,16 @@ export const expenseApi = {
 	create: data => api.post('/expenses', data).then(res => res.data),
 	update: (id, data) => api.put(`/expenses/${id}`, data).then(res => res.data),
 	delete: id => api.delete(`/expenses/${id}`).then(res => res.data),
+}
+
+export const dashboardApi = {
+	getStats: () => api.get('/dashboard/stats').then(res => res.data),
+}
+
+export const adminApi = {
+	getStats: () => api.get('/admin/stats').then(res => res.data),
+	getUsers: () => api.get('/admin/users').then(res => res.data),
+	getUserData: id => api.get(`/admin/users/${id}`).then(res => res.data),
+	toggleBlock: id =>
+		api.patch(`/admin/users/${id}/toggle-block`).then(res => res.data),
 }

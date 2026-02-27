@@ -22,6 +22,7 @@ import {
 import { Progress } from '@/components/ui/progress'
 import { Separator } from '@/components/ui/separator'
 
+import Navbar from '@/components/Navbar'
 import {
 	AlertCircle,
 	ArrowLeft,
@@ -36,6 +37,15 @@ import {
 	User,
 	Wallet,
 } from 'lucide-react'
+
+import {
+	Dialog,
+	DialogContent,
+	DialogDescription,
+	DialogFooter,
+	DialogHeader,
+	DialogTitle,
+} from '@/components/ui/dialog'
 
 const formatMoney = (amount, currency = 'UZS') => {
 	return new Intl.NumberFormat('uz-UZ', {
@@ -57,11 +67,17 @@ export default function DebtDetailsPage() {
 	const router = useRouter()
 	const { user, isLoading: userLoading, isError } = useUser()
 	const [isDeleting, setIsDeleting] = useState(false)
+	const [isHistoryDeleting, setIsHistoryDeleting] = useState(false)
+	const [isDeleteDialogOpen, setIsDeleteDialogOpen] = useState(false)
+	const [isHistoryDeleteDialogOpen, setIsHistoryDeleteDialogOpen] =
+		useState(false)
+	const [historyIdToDelete, setHistoryIdToDelete] = useState(null)
 
 	const {
 		data: debt,
 		error: debtError,
 		isLoading: debtLoading,
+		mutate,
 	} = useSWR(user && id ? `/debts/${id}` : null, () => debtApi.getById(id))
 
 	useEffect(() => {
@@ -69,9 +85,9 @@ export default function DebtDetailsPage() {
 	}, [isError, router])
 
 	const handleDelete = async () => {
-		if (!confirm("Haqiqatan ham bu qarzni o'chirmoqchimisiz?")) return
 		try {
 			setIsDeleting(true)
+			setIsDeleteDialogOpen(false)
 			await debtApi.delete(id)
 			toast.success("Qarz muvaffaqiyatli o'chirildi", {
 				style: { background: '#16A34A', color: '#fff' },
@@ -82,6 +98,26 @@ export default function DebtDetailsPage() {
 				style: { background: '#DC2626', color: '#fff' },
 			})
 			setIsDeleting(false)
+		}
+	}
+
+	const handleDeleteHistory = async () => {
+		if (!historyIdToDelete) return
+		try {
+			setIsHistoryDeleting(true)
+			setIsHistoryDeleteDialogOpen(false)
+			await debtApi.deleteHistory(id, historyIdToDelete)
+			toast.success("To'lov muvaffaqiyatli o'chirildi", {
+				style: { background: '#16A34A', color: '#fff' },
+			})
+			mutate()
+		} catch (error) {
+			toast.error(error.message || "O'chirishda xatolik yuz berdi", {
+				style: { background: '#DC2626', color: '#fff' },
+			})
+		} finally {
+			setIsHistoryDeleting(false)
+			setHistoryIdToDelete(null)
 		}
 	}
 
@@ -149,12 +185,13 @@ export default function DebtDetailsPage() {
 
 	return (
 		<div className='min-h-screen bg-muted/20 flex flex-col font-sans'>
+			<Navbar user={user} />
 			<main className='flex-1 w-full max-w-6xl mx-auto p-4 md:p-8'>
 				<div className='flex items-center gap-4 mb-8'>
 					<Button
 						variant='outline'
 						size='icon'
-						className='rounded-xl shadow-sm hover:bg-muted transition-colors'
+						className='shadow-sm hover:bg-muted transition-colors'
 						onClick={() => router.push('/debts')}
 					>
 						<ArrowLeft className='h-5 w-5' />
@@ -365,14 +402,30 @@ export default function DebtDetailsPage() {
 													<CheckCircle2 className='h-4 w-4 text-green-600 dark:text-green-500' />
 												</div>
 												<div className='flex-1 pt-0.5 pb-2'>
-													<p className='font-bold text-lg text-foreground'>
-														{formatMoney(item.amount, debt.currency)}
-													</p>
-													<p className='text-xs font-semibold text-muted-foreground mt-0.5'>
-														{format(new Date(item.date), 'dd MMMM, HH:mm', {
-															locale: uz,
-														})}
-													</p>
+													<div className='flex items-start justify-between'>
+														<div>
+															<p className='font-bold text-lg text-foreground'>
+																{formatMoney(item.amount, debt.currency)}
+															</p>
+															<p className='text-xs font-semibold text-muted-foreground mt-0.5'>
+																{format(new Date(item.date), 'dd MMMM, HH:mm', {
+																	locale: uz,
+																})}
+															</p>
+														</div>
+														<Button
+															variant='ghost'
+															size='icon'
+															className='h-8 w-8 text-muted-foreground hover:text-red-600 hover:bg-red-50 rounded-full transition-colors'
+															onClick={() => {
+																setHistoryIdToDelete(item._id)
+																setIsHistoryDeleteDialogOpen(true)
+															}}
+															disabled={isHistoryDeleting}
+														>
+															<Trash2 className='h-4 w-4' />
+														</Button>
+													</div>
 													{item.note && (
 														<div className='mt-3 text-sm text-muted-foreground bg-muted/40 p-3 rounded-xl border border-border/50 italic font-medium'>
 															"{item.note}"
@@ -411,7 +464,7 @@ export default function DebtDetailsPage() {
 								<Button
 									variant='destructive'
 									className='w-full rounded-xl font-bold tracking-wide h-11'
-									onClick={handleDelete}
+									onClick={() => setIsDeleteDialogOpen(true)}
 									disabled={isDeleting}
 								>
 									<Trash2 className='w-4 h-4 mr-2' />
@@ -422,6 +475,73 @@ export default function DebtDetailsPage() {
 					</div>
 				</div>
 			</main>
+
+			<Dialog open={isDeleteDialogOpen} onOpenChange={setIsDeleteDialogOpen}>
+				<DialogContent className='sm:max-w-md rounded-2xl'>
+					<DialogHeader>
+						<DialogTitle className='text-xl font-bold flex items-center gap-2 text-red-600'>
+							<Trash2 className='h-5 w-5' /> Qarzni o'chirish
+						</DialogTitle>
+						<DialogDescription className='text-base pt-2'>
+							Haqiqatan ham <strong>{debt.creditorName}</strong> uchun
+							kiritilgan ushbu qarzni o'chirmoqchimisiz? Bu amalni ortga
+							qaytarib bo'lmaydi.
+						</DialogDescription>
+					</DialogHeader>
+					<DialogFooter className='mt-6 gap-3 sm:gap-0'>
+						<Button
+							variant='outline'
+							onClick={() => setIsDeleteDialogOpen(false)}
+							className='rounded-xl flex-1'
+						>
+							Bekor qilish
+						</Button>
+						<Button
+							variant='destructive'
+							onClick={handleDelete}
+							className='rounded-xl flex-1 font-bold'
+						>
+							O'chirish
+						</Button>
+					</DialogFooter>
+				</DialogContent>
+			</Dialog>
+
+			<Dialog
+				open={isHistoryDeleteDialogOpen}
+				onOpenChange={setIsHistoryDeleteDialogOpen}
+			>
+				<DialogContent className='sm:max-w-md rounded-2xl'>
+					<DialogHeader>
+						<DialogTitle className='text-xl font-bold flex items-center gap-2 text-red-600'>
+							<History className='h-5 w-5' /> To'lovni o'chirish
+						</DialogTitle>
+						<DialogDescription className='text-base pt-2'>
+							Haqiqatan ham ushbu to'lovni tarixdan o'chirib tashlamoqchimisiz?
+							Bu amal jami to'langan summani kamaytiradi va qoldiqni oshiradi.
+						</DialogDescription>
+					</DialogHeader>
+					<DialogFooter className='mt-6 gap-3 sm:gap-0'>
+						<Button
+							variant='outline'
+							onClick={() => {
+								setIsHistoryDeleteDialogOpen(false)
+								setHistoryIdToDelete(null)
+							}}
+							className='rounded-xl flex-1'
+						>
+							Bekor qilish
+						</Button>
+						<Button
+							variant='destructive'
+							onClick={handleDeleteHistory}
+							className='rounded-xl flex-1 font-bold'
+						>
+							O'chirish
+						</Button>
+					</DialogFooter>
+				</DialogContent>
+			</Dialog>
 		</div>
 	)
 }
