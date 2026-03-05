@@ -10,7 +10,6 @@ import { useUser } from '@/hooks/useUser'
 import { expenseApi } from '@/lib/api'
 import { cn } from '@/lib/utils'
 
-import Navbar from '@/components/Navbar'
 import { Button } from '@/components/ui/button'
 import { Calendar } from '@/components/ui/calendar'
 import { Card, CardContent, CardFooter } from '@/components/ui/card'
@@ -140,9 +139,7 @@ export default function AddExpensePage() {
 	}
 
 	return (
-		<div className='min-h-screen bg-muted/20 flex flex-col font-sans'>
-			<Navbar user={user} />
-
+		<div className='min-h-screen bg-muted/20 flex flex-col font-sans pb-24'>
 			<main className='flex-1 w-full max-w-4xl mx-auto p-4 md:p-8'>
 				<div className='flex items-center gap-4 mb-8'>
 					<Button

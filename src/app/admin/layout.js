@@ -1,10 +1,8 @@
 'use client'
 
-import AdminNavbar from '@/components/AdminNavbar'
-import AdminSidebar from '@/components/AdminSidebar'
 import { Button } from '@/components/ui/button'
 import { useUser } from '@/hooks/useUser'
-import { LoaderIcon, ShieldAlert } from 'lucide-react'
+import { ShieldAlert } from 'lucide-react'
 import { useRouter } from 'next/navigation'
 import { useEffect } from 'react'
 
@@ -23,14 +21,12 @@ export default function AdminLayout({ children }) {
 
 	if (isLoading) {
 		return (
-			<div className='flex flex-col h-screen items-center justify-center bg-background gap-4'>
-				<div className='relative flex items-center justify-center'>
-					<div className='absolute h-16 w-16 rounded-full border-4 border-primary/20 animate-pulse'></div>
-					<LoaderIcon className='size-10 animate-spin text-primary relative z-10' />
-				</div>
-				<p className='text-lg font-bold text-muted-foreground animate-pulse tracking-wide uppercase text-xs'>
-					Xavfsiz ulanish o'rnatilmoqda...
-				</p>
+			<div className='min-h-screen bg-muted/20 selection:bg-primary/10'>
+				<main className='flex-1 overflow-x-hidden min-h-screen'>
+					<div className='p-4 md:p-8 lg:p-12 max-w-7xl mx-auto space-y-8'>
+						{children}
+					</div>
+				</main>
 			</div>
 		)
 	}
@@ -59,26 +55,18 @@ export default function AdminLayout({ children }) {
 	}
 
 	return (
-		<div className='flex min-h-screen bg-muted/20 selection:bg-primary/10'>
-			{/* Sidebar for Desktop */}
-			<aside className='hidden md:block w-72 shrink-0 border-r bg-background'>
-				<AdminSidebar className='fixed w-72 border-r-0' />
-			</aside>
+		<div className='min-h-screen bg-muted/20 selection:bg-primary/10'>
+			<main className='flex-1 overflow-x-hidden min-h-screen'>
+				<div className='p-4 md:p-8 lg:p-12 max-w-7xl mx-auto space-y-8 animate-in fade-in slide-in-from-bottom-6 duration-1000 ease-out'>
+					{children}
+				</div>
+			</main>
 
-			<div className='flex-1 flex flex-col min-w-0 min-h-screen'>
-				<AdminNavbar user={user} />
-				<main className='flex-1 overflow-x-hidden'>
-					<div className='p-4 md:p-8 lg:p-12 max-w-7xl mx-auto space-y-8 animate-in fade-in slide-in-from-bottom-6 duration-1000 ease-out'>
-						{children}
-					</div>
-				</main>
-
-				<footer className='py-6 px-4 text-center border-t bg-background/50 backdrop-blur-sm'>
-					<p className='text-xs font-bold text-muted-foreground/60 uppercase tracking-[0.2em]'>
-						Omonat Boshqaruv Tizimi © {new Date().getFullYear()}
-					</p>
-				</footer>
-			</div>
+			<footer className='py-6 px-4 text-center border-t bg-background/50 backdrop-blur-sm mb-20'>
+				<p className='text-xs font-bold text-muted-foreground/60 uppercase tracking-[0.2em]'>
+					Omonat Boshqaruv Tizimi © {new Date().getFullYear()}
+				</p>
+			</footer>
 		</div>
 	)
 }

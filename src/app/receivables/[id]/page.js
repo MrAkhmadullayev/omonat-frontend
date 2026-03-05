@@ -9,6 +9,7 @@ import useSWR from 'swr'
 
 import { useUser } from '@/hooks/useUser'
 import { receivableApi } from '@/lib/api'
+import { formatMoney } from '@/lib/formatters'
 
 import { Badge } from '@/components/ui/badge'
 import { Button } from '@/components/ui/button'
@@ -30,7 +31,6 @@ import {
 import { Progress } from '@/components/ui/progress'
 import { Separator } from '@/components/ui/separator'
 
-import Navbar from '@/components/Navbar'
 import {
 	AlertCircle,
 	ArrowDownToLine,
@@ -45,14 +45,6 @@ import {
 	User,
 	Wallet,
 } from 'lucide-react'
-
-const formatMoney = (amount, currency = 'UZS') => {
-	return new Intl.NumberFormat('uz-UZ', {
-		style: 'currency',
-		currency,
-		maximumFractionDigits: 0,
-	}).format(amount || 0)
-}
 
 const formatCardNumber = number => {
 	if (!number) return '**** **** **** ****'
@@ -90,14 +82,10 @@ export default function ReceivableDetailsPage() {
 			setIsDeleting(true)
 			setIsDeleteDialogOpen(false)
 			await receivableApi.delete(id)
-			toast.success("Haqdorlik muvaffaqiyatli o'chirildi", {
-				style: { background: '#16A34A', color: '#fff' },
-			})
+			toast.success("Haqdorlik muvaffaqiyatli o'chirildi")
 			router.push('/receivables')
 		} catch (error) {
-			toast.error(error.message || "O'chirishda xatolik yuz berdi", {
-				style: { background: '#DC2626', color: '#fff' },
-			})
+			toast.error(error.message || "O'chirishda xatolik yuz berdi")
 			setIsDeleting(false)
 		}
 	}
@@ -108,14 +96,10 @@ export default function ReceivableDetailsPage() {
 			setIsHistoryDeleting(true)
 			setIsHistoryDeleteDialogOpen(false)
 			await receivableApi.deleteHistory(id, historyIdToDelete)
-			toast.success("To'lov muvaffaqiyatli o'chirildi", {
-				style: { background: '#16A34A', color: '#fff' },
-			})
+			toast.success("To'lov muvaffaqiyatli o'chirildi")
 			mutate()
 		} catch (error) {
-			toast.error(error.message || "O'chirishda xatolik yuz berdi", {
-				style: { background: '#DC2626', color: '#fff' },
-			})
+			toast.error(error.message || "O'chirishda xatolik yuz berdi")
 		} finally {
 			setIsHistoryDeleting(false)
 			setHistoryIdToDelete(null)
@@ -184,8 +168,7 @@ export default function ReceivableDetailsPage() {
 	}
 
 	return (
-		<div className='min-h-screen bg-muted/20 flex flex-col font-sans'>
-			<Navbar user={user} />
+		<div className='min-h-screen bg-muted/20 flex flex-col font-sans pb-24'>
 			<main className='flex-1 w-full max-w-6xl mx-auto p-4 md:p-8'>
 				<div className='flex items-center gap-4 mb-8'>
 					<Button
@@ -314,7 +297,7 @@ export default function ReceivableDetailsPage() {
 										To'lov usuli
 									</h3>
 									{data.paymentMethod === 'cash' ? (
-										<div className='inline-flex items-center gap-2.5 text-sm font-bold p-4 rounded-xl bg-green-50 text-green-700 border border-green-200 dark:bg-green-950/30 dark:border-green-900 dark:text-green-400'>
+										<div className='inline-flex items-center gap-2.5 text-sm font-bold p-4 rounded-xl bg-green-50/80 text-green-700 border border-green-200 dark:bg-green-950/30 dark:border-green-900 dark:text-green-400'>
 											<Wallet className='h-5 w-5' /> Naqd pul orqali
 										</div>
 									) : data.paymentMethod === 'card' ? (
@@ -420,7 +403,7 @@ export default function ReceivableDetailsPage() {
 														<Button
 															variant='ghost'
 															size='icon'
-															className='h-8 w-8 text-muted-foreground hover:text-red-600 hover:bg-red-50 rounded-full transition-colors'
+															className='h-8 w-8 text-muted-foreground hover:text-red-600 hover:bg-red-50 dark:hover:bg-red-950/30 rounded-full transition-colors'
 															onClick={() => {
 																setHistoryIdToDelete(item._id)
 																setIsHistoryDeleteDialogOpen(true)

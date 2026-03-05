@@ -2,15 +2,15 @@
 
 import { format } from 'date-fns'
 import { uz } from 'date-fns/locale'
+import { AnimatePresence, motion } from 'framer-motion'
 import { useParams, useRouter } from 'next/navigation'
-import { useEffect, useState } from 'react'
+import { useEffect, useState, useTransition } from 'react'
 import { toast } from 'sonner'
 
 import { useUser } from '@/hooks/useUser'
 import { debtApi } from '@/lib/api'
 import { cn } from '@/lib/utils'
 
-import Navbar from '@/components/Navbar'
 import { Button } from '@/components/ui/button'
 import { Calendar } from '@/components/ui/calendar'
 import {
@@ -33,6 +33,7 @@ import {
 	SelectTrigger,
 	SelectValue,
 } from '@/components/ui/select'
+import { Skeleton } from '@/components/ui/skeleton'
 import { Switch } from '@/components/ui/switch'
 import { Textarea } from '@/components/ui/textarea'
 
@@ -42,7 +43,7 @@ import {
 	BellRing,
 	CalendarIcon,
 	CreditCard,
-	LoaderIcon,
+	Loader2,
 	Save,
 	Wallet,
 } from 'lucide-react'
@@ -51,9 +52,10 @@ export default function EditDebtPage() {
 	const { user, isLoading: userLoading, isError } = useUser()
 	const router = useRouter()
 	const { id } = useParams()
+	const [isPending, startTransition] = useTransition()
 
 	const [isFetching, setIsFetching] = useState(true)
-	const [isLoading, setIsLoading] = useState(false)
+	const [isSubmitting, setIsSubmitting] = useState(false)
 
 	const [creditorName, setCreditorName] = useState('')
 	const [amount, setAmount] = useState('')
@@ -94,9 +96,13 @@ export default function EditDebtPage() {
 				}
 			} catch (error) {
 				toast.error("Ma'lumotlarni yuklashda xatolik", {
-					style: { background: '#DC2626', color: '#fff' },
+					style: {
+						background: '#fee2e2',
+						color: '#dc2626',
+						border: '1px solid #f87171',
+					},
 				})
-				router.push('/debts')
+				navigate('/debts')
 			} finally {
 				setIsFetching(false)
 			}
@@ -105,19 +111,12 @@ export default function EditDebtPage() {
 		if (user && !userLoading) {
 			fetchDebt()
 		}
-	}, [id, user, userLoading, router])
+	}, [id, user, userLoading])
 
-	if (isError) return null
-
-	if (userLoading || isFetching || !user) {
-		return (
-			<div className='flex h-screen flex-col items-center justify-center bg-muted/20 gap-4'>
-				<LoaderIcon className='size-10 animate-spin text-primary' />
-				<p className='text-lg font-medium text-muted-foreground animate-pulse'>
-					Ma'lumotlar yuklanmoqda...
-				</p>
-			</div>
-		)
+	const navigate = path => {
+		startTransition(() => {
+			router.push(path)
+		})
 	}
 
 	const formatAmount = e => {
@@ -133,11 +132,18 @@ export default function EditDebtPage() {
 		e.preventDefault()
 
 		if (!dueDate) {
-			toast.error('Qaytarish muddatini tanlang!', { duration: 3000 })
+			toast.error('Qaytarish muddatini tanlang!', {
+				duration: 3000,
+				style: {
+					background: '#fee2e2',
+					color: '#dc2626',
+					border: '1px solid #f87171',
+				},
+			})
 			return
 		}
 
-		setIsLoading(true)
+		setIsSubmitting(true)
 
 		const updatedDebtData = {
 			creditorName,
@@ -157,114 +163,188 @@ export default function EditDebtPage() {
 
 		try {
 			if (updatedDebtData.amount <= 0) {
-				throw new Error("Qarz miqdori noldan katta bo'lishi kerak")
+				throw new Error("Qarz miqdori 0 dan katta bo'lishi kerak")
 			}
 
 			await debtApi.update(id, updatedDebtData)
 
 			toast.success('Qarz muvaffaqiyatli saqlandi!', {
-				position: 'top-right',
-				style: { background: '#16A34A', color: '#fff' },
+				position: 'top-center',
+				style: {
+					background: '#ecfdf5',
+					color: '#16a34a',
+					border: '1px solid #6ee7b7',
+				},
 			})
 
-			router.push('/debts')
+			navigate('/debts')
 		} catch (error) {
 			toast.error(error.message || 'Xatolik yuz berdi', {
-				position: 'top-right',
-				style: { background: '#DC2626', color: '#fff' },
+				position: 'top-center',
+				style: {
+					background: '#fee2e2',
+					color: '#dc2626',
+					border: '1px solid #f87171',
+				},
 			})
-			setIsLoading(false)
+			setIsSubmitting(false)
 		}
 	}
 
-	return (
-		<div className='min-h-screen bg-muted/20 flex flex-col font-sans'>
-			<Navbar user={user} />
+	if (userLoading || isFetching || !user) {
+		return (
+			<div className='min-h-screen bg-muted/20 pb-24'>
+				<main className='flex-1 w-full max-w-3xl mx-auto p-4 md:p-8'>
+					<div className='flex items-center gap-4 mb-6'>
+						<Skeleton className='h-9 w-9 rounded-lg' />
+						<div>
+							<Skeleton className='h-7 w-40 mb-1.5' />
+							<Skeleton className='h-3.5 w-64' />
+						</div>
+					</div>
+					<Card className='border-border/50 bg-background/60 shadow-sm rounded-xl'>
+						<CardContent className='p-6 space-y-6'>
+							<div className='space-y-2'>
+								<Skeleton className='h-4 w-32' />
+								<Skeleton className='h-10 w-full rounded-lg' />
+							</div>
+							<div className='grid grid-cols-1 md:grid-cols-3 gap-4'>
+								<div className='md:col-span-2 space-y-2'>
+									<Skeleton className='h-4 w-24' />
+									<Skeleton className='h-11 w-full rounded-lg' />
+								</div>
+								<div className='space-y-2'>
+									<Skeleton className='h-4 w-16' />
+									<Skeleton className='h-11 w-full rounded-lg' />
+								</div>
+							</div>
+							<div className='grid grid-cols-1 md:grid-cols-3 gap-4'>
+								<Skeleton className='h-10 w-full rounded-lg' />
+								<Skeleton className='h-10 w-full rounded-lg' />
+								<Skeleton className='h-10 w-full rounded-lg' />
+							</div>
+							<div className='space-y-2'>
+								<Skeleton className='h-4 w-32' />
+								<Skeleton className='h-24 w-full rounded-lg' />
+							</div>
+						</CardContent>
+					</Card>
+				</main>
+			</div>
+		)
+	}
 
-			<main className='flex-1 w-full max-w-4xl mx-auto p-4 md:p-8'>
-				<div className='flex items-center gap-4 mb-8'>
+	const containerVariants = {
+		hidden: { opacity: 0, y: 15 },
+		show: {
+			opacity: 1,
+			y: 0,
+			transition: { type: 'spring', stiffness: 400, damping: 30 },
+		},
+	}
+
+	return (
+		<div className='min-h-screen bg-muted/20 flex flex-col font-sans pb-24'>
+			<motion.main
+				initial='hidden'
+				animate='show'
+				variants={containerVariants}
+				className='flex-1 w-full max-w-3xl mx-auto p-4 md:p-8'
+			>
+				<div className='flex items-center gap-4 mb-6'>
 					<Button
 						variant='outline'
 						size='icon'
-						className='rounded-xl shadow-sm hover:bg-muted transition-colors h-10 w-10'
-						onClick={() => router.push('/debts')}
+						className='rounded-lg shadow-sm hover:bg-primary hover:text-primary-foreground hover:border-primary transition-colors h-9 w-9'
+						onClick={() => navigate('/debts')}
+						disabled={isPending || isSubmitting}
 					>
-						<ArrowLeft className='h-5 w-5' />
+						{isPending ? (
+							<Loader2 className='h-4 w-4 animate-spin' />
+						) : (
+							<ArrowLeft className='h-4 w-4' />
+						)}
 					</Button>
 					<div>
-						<h1 className='text-2xl font-bold tracking-tight text-foreground'>
+						<h1 className='text-xl md:text-2xl font-bold tracking-tight text-foreground'>
 							Qarzni tahrirlash
 						</h1>
-						<p className='text-sm text-muted-foreground font-medium mt-1'>
+						<p className='text-xs md:text-sm text-muted-foreground mt-0.5'>
 							Kiritilgan ma'lumotlarni o'zgartirishingiz mumkin.
 						</p>
 					</div>
 				</div>
 
-				<Card className='shadow-lg hover:shadow-xl transition-shadow duration-300 border-border/50 bg-background/60 backdrop-blur-xl overflow-hidden rounded-2xl'>
+				<Card className='shadow-sm hover:shadow-md transition-shadow duration-300 border-border/50 bg-background/80 backdrop-blur-xl overflow-hidden rounded-xl'>
 					<form onSubmit={handleSubmit}>
-						<CardContent className='p-6 sm:p-8 space-y-8'>
-							<div className='grid gap-3'>
+						<CardContent className='p-5 sm:p-6 space-y-5 sm:space-y-6'>
+							<div className='grid gap-2'>
 								<Label
 									htmlFor='creditorName'
-									className='text-sm font-bold text-foreground'
+									className='text-sm font-medium text-foreground'
 								>
 									Kimdan qarz oldingiz? <span className='text-red-500'>*</span>
 								</Label>
 								<Input
 									id='creditorName'
 									name='creditorName'
-									placeholder="Ism yoki Tashkilot (Masalan: Ali do'stim)"
-									className='h-12 text-base font-semibold rounded-xl border-border/50 shadow-sm focus-visible:ring-primary'
+									placeholder="Ism yoki tashkilot (Masalan: Ali do'stim)"
+									className='h-10 text-sm rounded-lg border-border/50 shadow-sm focus-visible:ring-primary/50 transition-colors bg-background/50'
 									value={creditorName}
 									onChange={e => setCreditorName(e.target.value)}
 									required
-									disabled={isLoading}
+									disabled={isSubmitting || isPending}
 								/>
 							</div>
 
-							<div className='grid grid-cols-1 md:grid-cols-3 gap-5'>
-								<div className='md:col-span-2 grid gap-3'>
+							<div className='grid grid-cols-1 md:grid-cols-3 gap-4'>
+								<div className='md:col-span-2 grid gap-2'>
 									<Label
 										htmlFor='amount'
-										className='text-sm font-bold text-foreground'
+										className='text-sm font-medium text-foreground'
 									>
 										Qarz miqdori <span className='text-red-500'>*</span>
 									</Label>
 									<div className='relative group'>
-										<div className='absolute left-4 top-1/2 -translate-y-1/2 text-muted-foreground group-focus-within:text-primary transition-colors'>
-											<Banknote className='h-5 w-5' />
+										<div className='absolute left-3.5 top-1/2 -translate-y-1/2 text-muted-foreground group-focus-within:text-primary transition-colors'>
+											<Banknote className='h-4.5 w-4.5' />
 										</div>
 										<Input
 											id='amount'
 											name='amount'
 											placeholder='1 000 000'
-											className='h-14 pl-12 text-xl font-black rounded-xl border-border/50 shadow-sm transition-all focus-visible:ring-primary'
+											className='h-11 pl-10 text-base font-semibold rounded-lg border-border/50 shadow-sm transition-all focus-visible:ring-primary/50 bg-background/50'
 											value={amount}
 											onChange={formatAmount}
 											required
-											disabled={isLoading}
+											disabled={isSubmitting || isPending}
 										/>
 									</div>
 								</div>
 
-								<div className='grid gap-3'>
-									<Label className='text-sm font-bold text-foreground'>
+								<div className='grid gap-2'>
+									<Label className='text-sm font-medium text-foreground'>
 										Valyuta
 									</Label>
 									<Select
 										value={currency}
 										onValueChange={setCurrency}
-										disabled={isLoading}
+										disabled={isSubmitting || isPending}
 									>
-										<SelectTrigger className='h-14 text-base font-bold rounded-xl border-border/50 shadow-sm focus:ring-primary'>
+										<SelectTrigger className='h-11 text-sm font-medium rounded-lg border-border/50 shadow-sm focus:ring-primary/50 bg-background/50'>
 											<SelectValue placeholder='Valyuta' />
 										</SelectTrigger>
-										<SelectContent className='rounded-xl'>
-											<SelectItem value='UZS' className='font-semibold py-3'>
+										<SelectContent className='rounded-lg shadow-lg border-border/50'>
+											<SelectItem
+												value='UZS'
+												className='py-2.5 text-sm cursor-pointer'
+											>
 												So'm (UZS)
 											</SelectItem>
-											<SelectItem value='USD' className='font-semibold py-3'>
+											<SelectItem
+												value='USD'
+												className='py-2.5 text-sm cursor-pointer'
+											>
 												Dollar (USD)
 											</SelectItem>
 										</SelectContent>
@@ -272,9 +352,9 @@ export default function EditDebtPage() {
 								</div>
 							</div>
 
-							<div className='grid grid-cols-1 md:grid-cols-3 gap-5'>
-								<div className='grid gap-3'>
-									<Label className='text-sm font-bold text-foreground'>
+							<div className='grid grid-cols-1 md:grid-cols-3 gap-4'>
+								<div className='grid gap-2'>
+									<Label className='text-sm font-medium text-foreground'>
 										Olingan sana <span className='text-red-500'>*</span>
 									</Label>
 									<Popover>
@@ -282,12 +362,12 @@ export default function EditDebtPage() {
 											<Button
 												variant='outline'
 												className={cn(
-													'h-12 w-full justify-start text-left font-semibold rounded-xl border-border/50 shadow-sm',
+													'h-10 w-full justify-start text-left text-sm font-normal rounded-lg border-border/50 shadow-sm bg-background/50 hover:bg-muted',
 													!dateTaken && 'text-muted-foreground',
 												)}
-												disabled={isLoading}
+												disabled={isSubmitting || isPending}
 											>
-												<CalendarIcon className='mr-3 h-4 w-4' />
+												<CalendarIcon className='mr-2.5 h-4 w-4 opacity-70' />
 												{dateTaken ? (
 													format(dateTaken, 'dd MMM, yyyy', { locale: uz })
 												) : (
@@ -296,7 +376,7 @@ export default function EditDebtPage() {
 											</Button>
 										</PopoverTrigger>
 										<PopoverContent
-											className='w-auto p-0 rounded-xl'
+											className='w-auto p-0 rounded-xl shadow-xl border-border/50'
 											align='start'
 										>
 											<Calendar
@@ -309,8 +389,8 @@ export default function EditDebtPage() {
 									</Popover>
 								</div>
 
-								<div className='grid gap-3'>
-									<Label className='text-sm font-bold text-foreground'>
+								<div className='grid gap-2'>
+									<Label className='text-sm font-medium text-foreground'>
 										Qaytarish muddati <span className='text-red-500'>*</span>
 									</Label>
 									<Popover>
@@ -318,12 +398,19 @@ export default function EditDebtPage() {
 											<Button
 												variant='outline'
 												className={cn(
-													'h-12 w-full justify-start text-left font-semibold rounded-xl border-border/50 shadow-sm border-orange-200/50 hover:bg-orange-50/50 dark:hover:bg-orange-900/20 text-orange-700 dark:text-orange-500',
-													!dueDate && 'text-muted-foreground',
+													'h-10 w-full justify-start text-left text-sm font-normal rounded-lg border-border/50 shadow-sm',
+													dueDate
+														? 'bg-red-50 text-red-600 border-red-200 hover:bg-red-100'
+														: 'bg-background/50 text-muted-foreground hover:bg-muted',
 												)}
-												disabled={isLoading}
+												disabled={isSubmitting || isPending}
 											>
-												<CalendarIcon className='mr-3 h-4 w-4' />
+												<CalendarIcon
+													className={cn(
+														'mr-2.5 h-4 w-4',
+														dueDate ? 'opacity-100' : 'opacity-70',
+													)}
+												/>
 												{dueDate ? (
 													format(dueDate, 'dd MMM, yyyy', { locale: uz })
 												) : (
@@ -332,7 +419,7 @@ export default function EditDebtPage() {
 											</Button>
 										</PopoverTrigger>
 										<PopoverContent
-											className='w-auto p-0 rounded-xl'
+											className='w-auto p-0 rounded-xl shadow-xl border-border/50'
 											align='start'
 										>
 											<Calendar
@@ -345,27 +432,34 @@ export default function EditDebtPage() {
 									</Popover>
 								</div>
 
-								<div className='grid gap-3'>
-									<Label className='text-sm font-bold text-foreground'>
+								<div className='grid gap-2'>
+									<Label className='text-sm font-medium text-foreground'>
 										Qanday qaytariladi?
 									</Label>
 									<Select
 										value={paymentMethod}
 										onValueChange={setPaymentMethod}
-										disabled={isLoading}
+										disabled={isSubmitting || isPending}
 									>
-										<SelectTrigger className='h-12 text-sm font-semibold rounded-xl border-border/50 shadow-sm'>
+										<SelectTrigger className='h-10 text-sm font-normal rounded-lg border-border/50 shadow-sm focus:ring-primary/50 bg-background/50'>
 											<SelectValue placeholder="To'lov turi" />
 										</SelectTrigger>
-										<SelectContent className='rounded-xl'>
-											<SelectItem value='cash' className='py-3'>
-												<div className='flex items-center gap-2.5 font-semibold text-green-700 dark:text-green-500'>
-													<Wallet className='h-4 w-4' /> Naqd pul
+										<SelectContent className='rounded-lg shadow-lg border-border/50'>
+											<SelectItem
+												value='cash'
+												className='py-2.5 cursor-pointer'
+											>
+												<div className='flex items-center gap-2 text-sm'>
+													<Wallet className='h-4 w-4 text-green-600' /> Naqd pul
 												</div>
 											</SelectItem>
-											<SelectItem value='card' className='py-3'>
-												<div className='flex items-center gap-2.5 font-semibold text-blue-700 dark:text-blue-500'>
-													<CreditCard className='h-4 w-4' /> Karta orqali
+											<SelectItem
+												value='card'
+												className='py-2.5 cursor-pointer'
+											>
+												<div className='flex items-center gap-2 text-sm'>
+													<CreditCard className='h-4 w-4 text-blue-600' /> Karta
+													orqali
 												</div>
 											</SelectItem>
 										</SelectContent>
@@ -373,118 +467,131 @@ export default function EditDebtPage() {
 								</div>
 							</div>
 
-							{paymentMethod === 'card' && (
-								<div className='grid grid-cols-1 md:grid-cols-2 gap-5 p-5 border border-blue-200/50 rounded-2xl bg-blue-50/30 dark:bg-blue-950/10 animate-in fade-in slide-in-from-top-4 duration-300'>
-									<div className='grid gap-2.5'>
-										<Label
-											htmlFor='cardNumber'
-											className='text-sm font-semibold text-blue-800 dark:text-blue-300'
-										>
-											Karta raqami (Ixtiyoriy)
-										</Label>
-										<Input
-											id='cardNumber'
-											name='cardNumber'
-											placeholder='8600 1234 5678 9012'
-											className='h-12 font-mono tracking-widest rounded-xl bg-background border-border/50 shadow-sm'
-											disabled={isLoading}
-											value={cardNumber}
-											onChange={e => {
-												let val = e.target.value.replace(/\D/g, '')
-												val = val.substring(0, 16)
-												setCardNumber(val.match(/.{1,4}/g)?.join(' ') || val)
-											}}
-										/>
-									</div>
-									<div className='grid gap-2.5'>
-										<Label
-											htmlFor='cardHolder'
-											className='text-sm font-semibold text-blue-800 dark:text-blue-300'
-										>
-											Karta egasi (Ixtiyoriy)
-										</Label>
-										<Input
-											id='cardHolder'
-											name='cardHolder'
-											placeholder='ALI VALIYEV'
-											className='h-12 font-bold uppercase tracking-wide rounded-xl bg-background border-border/50 shadow-sm'
-											disabled={isLoading}
-											value={cardHolder}
-											onChange={e =>
-												setCardHolder(e.target.value.toUpperCase())
-											}
-										/>
-									</div>
-								</div>
-							)}
+							<AnimatePresence>
+								{paymentMethod === 'card' && (
+									<motion.div
+										initial={{ opacity: 0, height: 0, marginTop: 0 }}
+										animate={{ opacity: 1, height: 'auto', marginTop: 16 }}
+										exit={{ opacity: 0, height: 0, marginTop: 0 }}
+										className='grid grid-cols-1 md:grid-cols-2 gap-4 p-4 border border-blue-100 rounded-xl bg-blue-50/30 overflow-hidden'
+									>
+										<div className='grid gap-2'>
+											<Label
+												htmlFor='cardNumber'
+												className='text-xs font-medium text-blue-800'
+											>
+												Karta raqami (Ixtiyoriy)
+											</Label>
+											<Input
+												id='cardNumber'
+												name='cardNumber'
+												placeholder='8600 1234 5678 9012'
+												className='h-10 font-mono tracking-widest text-sm rounded-lg bg-background border-border/50 shadow-sm focus-visible:ring-blue-400'
+												disabled={isSubmitting || isPending}
+												value={cardNumber}
+												onChange={e => {
+													let val = e.target.value.replace(/\D/g, '')
+													val = val.substring(0, 16)
+													setCardNumber(val.match(/.{1,4}/g)?.join(' ') || val)
+												}}
+											/>
+										</div>
+										<div className='grid gap-2'>
+											<Label
+												htmlFor='cardHolder'
+												className='text-xs font-medium text-blue-800'
+											>
+												Karta egasi (Ixtiyoriy)
+											</Label>
+											<Input
+												id='cardHolder'
+												name='cardHolder'
+												placeholder='ALI VALIYEV'
+												className='h-10 text-sm uppercase rounded-lg bg-background border-border/50 shadow-sm focus-visible:ring-blue-400'
+												disabled={isSubmitting || isPending}
+												value={cardHolder}
+												onChange={e =>
+													setCardHolder(e.target.value.toUpperCase())
+												}
+											/>
+										</div>
+									</motion.div>
+								)}
+							</AnimatePresence>
 
-							<div className='grid gap-3'>
+							<div className='grid gap-2'>
 								<Label
 									htmlFor='description'
-									className='text-sm font-bold text-foreground'
+									className='text-sm font-medium text-foreground'
 								>
 									Qo'shimcha izoh (Ixtiyoriy)
 								</Label>
 								<Textarea
 									id='description'
 									name='description'
-									laceholder='Nimaga ishlatish uchun olindi yoki qaytarish shartlari haqida eslatma...'
-									rows={4}
-									disabled={isLoading}
+									placeholder='Nimaga ishlatish uchun olindi yoki qaytarish shartlari...'
+									rows={3}
+									disabled={isSubmitting || isPending}
 									value={description}
 									onChange={e => setDescription(e.target.value)}
-									className='resize-none text-base p-4 rounded-xl border-border/50 shadow-sm'
+									className='resize-none text-sm p-3 rounded-lg border-border/50 shadow-sm focus-visible:ring-primary/50 bg-background/50'
 								/>
 							</div>
 
-							<div className='flex flex-row items-center justify-between rounded-2xl border border-border/50 p-5 bg-muted/20 hover:bg-muted/40 transition-colors'>
+							<div className='flex flex-row items-center justify-between rounded-xl border border-border/50 p-4 bg-muted/20'>
 								<div className='space-y-1 pr-4'>
-									<Label className='text-base font-bold flex items-center gap-2 text-foreground'>
+									<Label
+										className='text-sm font-medium flex items-center gap-2 text-foreground cursor-pointer'
+										onClick={() =>
+											!isSubmitting &&
+											!isPending &&
+											setEnableReminder(!enableReminder)
+										}
+									>
 										<BellRing
-											className={`h-5 w-5 ${enableReminder ? 'text-primary animate-pulse' : 'text-muted-foreground'}`}
+											className={`h-4 w-4 transition-colors ${enableReminder ? 'text-primary' : 'text-muted-foreground'}`}
 										/>
 										Avtomatik eslatma
 									</Label>
-									<CardDescription className='text-sm font-medium'>
-										Qaytarish muddati yaqinlashganda dastur sizga ogohlantirish
-										beradi.
+									<CardDescription className='text-xs'>
+										Qaytarish muddati yaqinlashganda ogohlantirish beriladi.
 									</CardDescription>
 								</div>
 								<Switch
 									checked={enableReminder}
 									onCheckedChange={setEnableReminder}
-									disabled={isLoading}
-									className='data-[state=checked]:bg-primary'
+									disabled={isSubmitting || isPending}
+									className='data-[state=checked]:bg-primary shadow-sm'
 								/>
 							</div>
 						</CardContent>
 
-						<CardFooter className='flex flex-col-reverse sm:flex-row justify-end gap-3 border-t border-border/50 p-6 sm:p-8 bg-muted/10 backdrop-blur-sm'>
+						<CardFooter className='flex flex-col-reverse sm:flex-row justify-end gap-3 border-t border-border/50 p-4 sm:p-6 bg-muted/5 rounded-b-xl'>
 							<Button
 								type='button'
 								variant='ghost'
-								className='w-full sm:w-auto h-12 rounded-xl font-bold hover:bg-muted'
-								onClick={() => router.push('/debts')}
-								disabled={isLoading}
+								className='w-full sm:w-auto h-10 rounded-lg text-sm hover:bg-muted text-muted-foreground transition-colors'
+								onClick={() => navigate('/debts')}
+								disabled={isSubmitting || isPending}
 							>
 								Bekor qilish
 							</Button>
 							<Button
 								type='submit'
-								disabled={isLoading}
-								className='w-full sm:w-auto h-12 px-8 rounded-xl font-bold tracking-wide gap-2 bg-primary hover:bg-primary/90 text-primary-foreground shadow-md hover:shadow-lg transition-all'
+								disabled={isSubmitting || isPending}
+								className='w-full sm:w-auto h-10 px-6 rounded-lg text-sm font-medium gap-2 bg-primary hover:bg-primary/90 text-primary-foreground shadow-sm transition-all hover:shadow-md'
 							>
-								{isLoading ? (
-									<LoaderIcon className='h-5 w-5 animate-spin' />
+								{isSubmitting ? (
+									<Loader2 className='h-4 w-4 animate-spin' />
 								) : (
-									<Save className='h-5 w-5' />
+									<Save className='h-4 w-4' />
 								)}
-								{isLoading ? 'Saqlanmoqda...' : "O'zgarishlarni saqlash"}
+								{isSubmitting ? 'Saqlanmoqda...' : 'Saqlash'}
 							</Button>
 						</CardFooter>
 					</form>
 				</Card>
-			</main>
+			</motion.main>
 		</div>
 	)
 }

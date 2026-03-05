@@ -8,11 +8,16 @@ import useSWR from 'swr'
 
 import { useUser } from '@/hooks/useUser'
 import { receivableApi } from '@/lib/api'
+import { formatMoney } from '@/lib/formatters'
 
-import Navbar from '@/components/Navbar'
-import { Badge } from '@/components/ui/badge'
+import EmptyState from '@/components/EmptyState'
+import ErrorState from '@/components/ErrorState'
+import LoadingState from '@/components/LoadingState'
+import PageHeader from '@/components/PageHeader'
+import StatsCard from '@/components/StatsCard'
+import StatusBadge from '@/components/StatusBadge'
 import { Button } from '@/components/ui/button'
-import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card'
+import { Card, CardContent } from '@/components/ui/card'
 import {
 	DropdownMenu,
 	DropdownMenuContent,
@@ -35,33 +40,23 @@ import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs'
 import {
 	AlertCircle,
 	ArrowDownToLine,
-	ArrowLeft,
 	Banknote,
 	CalendarClock,
 	CreditCard,
 	Edit,
 	Eye,
-	LoaderIcon,
 	MoreHorizontal,
 	Plus,
 	Search,
+	TrendingUp,
 	Wallet,
 } from 'lucide-react'
-
-const formatMoney = (amount, currency = 'UZS') => {
-	return new Intl.NumberFormat('uz-UZ', {
-		style: 'currency',
-		currency,
-		maximumFractionDigits: 0,
-	}).format(amount || 0)
-}
 
 export default function ReceivablesPage() {
 	const router = useRouter()
 	const { user, isLoading: isUserLoading, isError } = useUser()
 	const [searchQuery, setSearchQuery] = useState('')
 
-	// XATOLIK TARTIBGA SOLINDI: () => receivableApi.getAll() qilib o'zgartirildi
 	const {
 		data: receivables = [],
 		isLoading: isReceivablesLoading,
@@ -75,58 +70,11 @@ export default function ReceivablesPage() {
 	if (isError) return null
 
 	if (isUserLoading || isReceivablesLoading || !user) {
-		return (
-			<div className='flex h-screen flex-col items-center justify-center bg-muted/20 gap-4'>
-				<LoaderIcon className='size-10 animate-spin text-primary' />
-				<p className='text-lg font-medium text-muted-foreground animate-pulse'>
-					Haqdorlik ma'lumotlari yuklanmoqda...
-				</p>
-			</div>
-		)
+		return <LoadingState message="Haqdorlik ma'lumotlari yuklanmoqda..." />
 	}
 
 	if (receivablesError) {
-		return (
-			<div className='flex h-screen flex-col items-center justify-center gap-4 bg-muted/20'>
-				<AlertCircle className='size-12 text-muted-foreground/50' />
-				<p className='text-xl font-bold text-red-600'>Tarmoq xatoligi!</p>
-				<p className='text-muted-foreground font-medium'>
-					{receivablesError.message}
-				</p>
-				<Button
-					onClick={() => window.location.reload()}
-					variant='outline'
-					className='mt-2 rounded-xl'
-				>
-					Sahifani yangilash
-				</Button>
-			</div>
-		)
-	}
-
-	const getStatusBadge = status => {
-		switch (status) {
-			case 'paid':
-				return (
-					<Badge className='bg-green-500 hover:bg-green-600 shadow-sm'>
-						To'liq olindi
-					</Badge>
-				)
-			case 'partial':
-				return (
-					<Badge className='bg-orange-500 hover:bg-orange-600 shadow-sm'>
-						Qisman olindi
-					</Badge>
-				)
-			case 'pending':
-				return (
-					<Badge className='bg-primary hover:bg-primary/90 text-primary-foreground shadow-sm'>
-						Olinmagan
-					</Badge>
-				)
-			default:
-				return <Badge variant='secondary'>Noma'lum</Badge>
-		}
+		return <ErrorState message={receivablesError.message} />
 	}
 
 	const filteredReceivables = receivables.filter(item =>
@@ -156,11 +104,8 @@ export default function ReceivablesPage() {
 		if (itemsArray.length === 0) {
 			return (
 				<TableRow>
-					<TableCell
-						colSpan={8}
-						className='text-center py-12 text-muted-foreground bg-muted/10 font-medium'
-					>
-						Hozircha ma'lumot topilmadi
+					<TableCell colSpan={8} className='p-0'>
+						<EmptyState icon={Wallet} title="Hozircha ma'lumot topilmadi" />
 					</TableCell>
 				</TableRow>
 			)
@@ -192,7 +137,7 @@ export default function ReceivablesPage() {
 								)}
 								{item.paymentMethod === 'card' ? 'Karta orqali' : 'Naqd pul'}
 								{item.paymentMethod === 'card' && item.cardNumber && (
-									<span className='ml-1 font-mono text-[10px] bg-muted/50 px-1 rounded-sm'>
+									<span className='ml-1 font-mono text-xs bg-muted/50 px-1 rounded-sm'>
 										*{item.cardNumber.slice(-4)}
 									</span>
 								)}
@@ -215,7 +160,7 @@ export default function ReceivablesPage() {
 							</span>
 							{item.status !== 'paid' && (
 								<span
-									className={`text-xs font-bold flex items-center gap-1 mt-1 ${isOverdue ? 'text-red-600' : isClose ? 'text-orange-500' : 'text-green-600'}`}
+									className={`text-xs font-bold flex items-center gap-1 mt-1 ${isOverdue ? 'text-destructive' : isClose ? 'text-orange-500' : 'text-green-600'}`}
 								>
 									{isOverdue && <AlertCircle className='h-3 w-3' />}
 									{isOverdue
@@ -225,8 +170,9 @@ export default function ReceivablesPage() {
 							)}
 						</div>
 					</TableCell>
-					<TableCell>{getStatusBadge(item.status)}</TableCell>
-
+					<TableCell>
+						<StatusBadge status={item.status} type='receivable' />
+					</TableCell>
 					<TableCell className='text-right pr-4'>
 						<DropdownMenu>
 							<DropdownMenuTrigger asChild>
@@ -248,7 +194,6 @@ export default function ReceivablesPage() {
 									<Eye className='mr-2 h-4 w-4 text-muted-foreground' />{' '}
 									Batafsil ko'rish
 								</DropdownMenuItem>
-
 								<DropdownMenuItem
 									onClick={() =>
 										router.push(`/receivables/${item._id || item.id}/edit`)
@@ -267,7 +212,7 @@ export default function ReceivablesPage() {
 													`/receivables/${item._id || item.id}/receive`,
 												)
 											}
-											className='cursor-pointer py-2 text-green-600 focus:bg-green-50 focus:text-green-600 font-bold'
+											className='cursor-pointer py-2 text-green-600 focus:bg-green-50 focus:text-green-600 dark:focus:bg-green-950/30 dark:focus:text-green-400 font-bold'
 										>
 											<ArrowDownToLine className='mr-2 h-4 w-4' /> To'lov qabul
 											qilish
@@ -282,102 +227,100 @@ export default function ReceivablesPage() {
 		})
 	}
 
-	return (
-		<div className='min-h-screen bg-muted/20 flex flex-col font-sans'>
-			<Navbar user={user} />
+	const renderTable = data => (
+		<Card className='border-border/50 shadow-sm overflow-hidden bg-background/60 backdrop-blur-sm p-0'>
+			<CardContent className='p-0'>
+				<div className='rounded-xl border border-border/50 overflow-x-auto bg-background'>
+					<Table>
+						<TableHeader className='bg-muted/30'>
+							<TableRow className='hover:bg-transparent'>
+								<TableHead className='w-[50px] font-bold pl-4 text-xs uppercase tracking-wider'>
+									#
+								</TableHead>
+								<TableHead className='font-bold text-xs uppercase tracking-wider'>
+									Kimdan
+								</TableHead>
+								<TableHead className='font-bold text-xs uppercase tracking-wider'>
+									Jami haq
+								</TableHead>
+								<TableHead className='font-bold text-xs uppercase tracking-wider'>
+									Olindi
+								</TableHead>
+								<TableHead className='font-bold text-xs uppercase tracking-wider'>
+									Qoldiq
+								</TableHead>
+								<TableHead className='font-bold text-xs uppercase tracking-wider'>
+									Muddat
+								</TableHead>
+								<TableHead className='font-bold text-xs uppercase tracking-wider'>
+									Holati
+								</TableHead>
+								<TableHead className='text-right font-bold pr-4 text-xs uppercase tracking-wider'>
+									Amallar
+								</TableHead>
+							</TableRow>
+						</TableHeader>
+						<TableBody>{renderTableRows(data)}</TableBody>
+					</Table>
+				</div>
+			</CardContent>
+		</Card>
+	)
 
+	return (
+		<div className='min-h-screen bg-muted/20 flex flex-col font-sans pb-24'>
 			<main className='flex-1 w-full max-w-7xl mx-auto p-4 md:p-8'>
-				<div className='flex flex-col gap-4 md:flex-row md:items-center md:justify-between mb-8'>
-					<div className='flex items-center gap-4'>
+				<div className='mb-8'>
+					<PageHeader
+						title='Haqdorligim'
+						subtitle="Boshqalardan olishim kerak bo'lgan pullar."
+						backHref='/'
+					>
 						<Button
 							variant='outline'
-							size='icon'
-							className='shadow-sm hover:bg-muted transition-colors'
-							onClick={() => router.push('/')}
+							className='flex-1 md:flex-none rounded-xl gap-2 h-11 transition-all font-bold hover:bg-muted'
+							onClick={() => router.push('/receivables/reports')}
 						>
-							<ArrowLeft className='h-5 w-5' />
+							<TrendingUp className='h-4 w-4 text-primary' /> Hisobotlar
 						</Button>
-						<div>
-							<h1 className='text-2xl font-bold tracking-tight text-foreground'>
-								Haqdorligim
-							</h1>
-							<p className='text-sm text-muted-foreground font-medium mt-1'>
-								Boshqalardan olishim kerak bo'lgan pullar.
-							</p>
-						</div>
-					</div>
-					<Button
-						className='w-full md:w-auto shadow-md gap-2  transition-all font-bold'
-						onClick={() => router.push('/receivables/add')}
-					>
-						<Plus className='h-5 w-5' /> Yangi haq qo'shish
-					</Button>
+						<Button
+							className='flex-1 md:flex-none shadow-md rounded-xl gap-2 h-11 transition-all font-bold'
+							onClick={() => router.push('/receivables/add')}
+						>
+							<Plus className='h-5 w-5' /> Yangi
+						</Button>
+					</PageHeader>
 				</div>
 
 				<div className='grid gap-4 md:grid-cols-2 lg:grid-cols-4 mb-8'>
-					<Card className='hover:shadow-md transition-all duration-300 border-border/50 bg-background/60 backdrop-blur-sm'>
-						<CardHeader className='flex flex-row items-center justify-between pb-2'>
-							<CardTitle className='text-sm font-bold text-muted-foreground uppercase tracking-wider'>
-								Kutilayotgan jami pul
-							</CardTitle>
-							<div className='p-2 bg-muted rounded-full border border-border/50'>
-								<Banknote className='h-4 w-4 text-foreground' />
-							</div>
-						</CardHeader>
-						<CardContent>
-							<div className='text-2xl font-black text-foreground'>
-								{formatMoney(stats.totalExpected)}
-							</div>
-						</CardContent>
-					</Card>
-
-					<Card className='hover:shadow-md transition-all duration-300 border-border/50 bg-background/60 backdrop-blur-sm'>
-						<CardHeader className='flex flex-row items-center justify-between pb-2'>
-							<CardTitle className='text-sm font-bold text-muted-foreground uppercase tracking-wider'>
-								Shundan olindi
-							</CardTitle>
-							<div className='p-2 bg-green-50 dark:bg-green-900/20 rounded-full border border-green-100 dark:border-green-900/30'>
-								<Wallet className='h-4 w-4 text-green-600' />
-							</div>
-						</CardHeader>
-						<CardContent>
-							<div className='text-2xl font-black text-green-600'>
-								{formatMoney(stats.totalReceivedOfActive)}
-							</div>
-						</CardContent>
-					</Card>
-
-					<Card className='hover:shadow-md transition-all duration-300 border-border/50 bg-background/60 backdrop-blur-sm'>
-						<CardHeader className='flex flex-row items-center justify-between pb-2'>
-							<CardTitle className='text-sm font-bold text-muted-foreground uppercase tracking-wider'>
-								Qoldiq (Olishim kerak)
-							</CardTitle>
-							<div className='p-2 bg-muted rounded-full'>
-								<ArrowDownToLine className='h-4 w-4 text-foreground' />
-							</div>
-						</CardHeader>
-						<CardContent>
-							<div className='text-2xl font-black text-foreground'>
-								{formatMoney(stats.totalRemaining)}
-							</div>
-						</CardContent>
-					</Card>
-
-					<Card className='bg-muted/30 border-dashed hover:shadow-md transition-all duration-300'>
-						<CardHeader className='flex flex-row items-center justify-between pb-2'>
-							<CardTitle className='text-sm font-bold text-muted-foreground uppercase tracking-wider'>
-								To'liq olinganlar
-							</CardTitle>
-							<div className='p-2 bg-muted rounded-full'>
-								<CalendarClock className='h-4 w-4 text-muted-foreground' />
-							</div>
-						</CardHeader>
-						<CardContent>
-							<div className='text-2xl font-black text-foreground'>
-								{formatMoney(stats.totalFullyReceived)}
-							</div>
-						</CardContent>
-					</Card>
+					<StatsCard
+						title='Kutilayotgan jami pul'
+						value={formatMoney(stats.totalExpected)}
+						icon={Banknote}
+						animated={false}
+					/>
+					<StatsCard
+						title='Shundan olindi'
+						value={formatMoney(stats.totalReceivedOfActive)}
+						valueColor='text-green-600'
+						icon={Wallet}
+						iconBg='bg-green-50 dark:bg-green-900/20'
+						iconColor='text-green-600'
+						animated={false}
+					/>
+					<StatsCard
+						title='Qoldiq (Olishim kerak)'
+						value={formatMoney(stats.totalRemaining)}
+						icon={ArrowDownToLine}
+						animated={false}
+					/>
+					<StatsCard
+						title="To'liq olinganlar"
+						value={formatMoney(stats.totalFullyReceived)}
+						icon={CalendarClock}
+						className='bg-muted/30 border-dashed'
+						animated={false}
+					/>
 				</div>
 
 				<Tabs defaultValue='active' className='w-full'>
@@ -413,86 +356,14 @@ export default function ReceivablesPage() {
 						value='active'
 						className='mt-0 focus-visible:outline-none focus-visible:ring-0'
 					>
-						<Card className='border-border/50 shadow-sm overflow-hidden bg-background/60 backdrop-blur-sm p-0'>
-							<CardContent className='p-0'>
-								<div className='rounded-xl border border-border/50 overflow-x-auto bg-background'>
-									<Table>
-										<TableHeader className='bg-muted/30'>
-											<TableRow className='hover:bg-transparent'>
-												<TableHead className='w-[50px] font-bold pl-4 text-xs uppercase tracking-wider'>
-													#
-												</TableHead>
-												<TableHead className='font-bold text-xs uppercase tracking-wider'>
-													Kimdan
-												</TableHead>
-												<TableHead className='font-bold text-xs uppercase tracking-wider'>
-													Jami haq
-												</TableHead>
-												<TableHead className='font-bold text-xs uppercase tracking-wider'>
-													Olindi
-												</TableHead>
-												<TableHead className='font-bold text-xs uppercase tracking-wider'>
-													Qoldiq
-												</TableHead>
-												<TableHead className='font-bold text-xs uppercase tracking-wider'>
-													Muddat
-												</TableHead>
-												<TableHead className='font-bold text-xs uppercase tracking-wider'>
-													Holati
-												</TableHead>
-												<TableHead className='text-right font-bold pr-4 text-xs uppercase tracking-wider'>
-													Amallar
-												</TableHead>
-											</TableRow>
-										</TableHeader>
-										<TableBody>{renderTableRows(activeReceivables)}</TableBody>
-									</Table>
-								</div>
-							</CardContent>
-						</Card>
+						{renderTable(activeReceivables)}
 					</TabsContent>
 
 					<TabsContent
 						value='paid'
 						className='mt-0 focus-visible:outline-none focus-visible:ring-0'
 					>
-						<Card className='border-border/50 shadow-sm overflow-hidden opacity-90 bg-background/60 backdrop-blur-sm p-0'>
-							<CardContent className='p-0'>
-								<div className='rounded-xl border border-border/50 overflow-x-auto bg-background'>
-									<Table>
-										<TableHeader className='bg-muted/30'>
-											<TableRow className='hover:bg-transparent'>
-												<TableHead className='w-[50px] font-bold pl-4 text-xs uppercase tracking-wider'>
-													#
-												</TableHead>
-												<TableHead className='font-bold text-xs uppercase tracking-wider'>
-													Kimdan
-												</TableHead>
-												<TableHead className='font-bold text-xs uppercase tracking-wider'>
-													Jami haq
-												</TableHead>
-												<TableHead className='font-bold text-xs uppercase tracking-wider'>
-													Olindi
-												</TableHead>
-												<TableHead className='font-bold text-xs uppercase tracking-wider'>
-													Qoldiq
-												</TableHead>
-												<TableHead className='font-bold text-xs uppercase tracking-wider'>
-													Muddat
-												</TableHead>
-												<TableHead className='font-bold text-xs uppercase tracking-wider'>
-													Holati
-												</TableHead>
-												<TableHead className='text-right font-bold pr-4 text-xs uppercase tracking-wider'>
-													Amallar
-												</TableHead>
-											</TableRow>
-										</TableHeader>
-										<TableBody>{renderTableRows(paidReceivables)}</TableBody>
-									</Table>
-								</div>
-							</CardContent>
-						</Card>
+						{renderTable(paidReceivables)}
 					</TabsContent>
 				</Tabs>
 			</main>

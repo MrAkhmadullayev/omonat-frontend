@@ -1,21 +1,16 @@
 import axios from 'axios'
 
 const BASE_URL = '/api'
-// const BASE_URL = 'http://localhost:2026/api'
 
 export const api = axios.create({
 	baseURL: BASE_URL,
 	withCredentials: true,
-	headers: {
-		'Content-Type': 'application/json',
-	},
+	headers: { 'Content-Type': 'application/json' },
 	timeout: 9000,
 })
 
 api.interceptors.response.use(
-	response => {
-		return response
-	},
+	response => response,
 	error => {
 		const customError = {
 			message:
@@ -24,10 +19,12 @@ api.interceptors.response.use(
 			status: error.response?.status,
 		}
 
-		if (customError.status === 401) {
-			console.warn(
-				'Avtorizatsiya xatosi: Foydalanuvchi tizimdan chiqib ketgan.',
-			)
+		if (
+			customError.status === 401 &&
+			typeof window !== 'undefined' &&
+			!window.location.pathname.startsWith('/authentication')
+		) {
+			window.location.href = '/authentication/login'
 		}
 
 		return Promise.reject(customError)
@@ -52,6 +49,7 @@ export const debtApi = {
 		api.post(`/debts/${id}/pay`, paymentData).then(res => res.data),
 	deleteHistory: (id, historyId) =>
 		api.delete(`/debts/${id}/history/${historyId}`).then(res => res.data),
+	getReports: () => api.get('/debts/reports').then(res => res.data),
 }
 
 export const receivableApi = {
@@ -65,6 +63,7 @@ export const receivableApi = {
 		api.post(`/receivables/${id}/pay`, paymentData).then(res => res.data),
 	deleteHistory: (id, historyId) =>
 		api.delete(`/receivables/${id}/history/${historyId}`).then(res => res.data),
+	getReports: () => api.get('/receivables/reports').then(res => res.data),
 }
 
 export const expenseApi = {
@@ -73,6 +72,7 @@ export const expenseApi = {
 	create: data => api.post('/expenses', data).then(res => res.data),
 	update: (id, data) => api.put(`/expenses/${id}`, data).then(res => res.data),
 	delete: id => api.delete(`/expenses/${id}`).then(res => res.data),
+	getReports: () => api.get('/expenses/reports').then(res => res.data),
 }
 
 export const dashboardApi = {

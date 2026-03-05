@@ -7,7 +7,8 @@ import { toast } from 'sonner'
 import { useUser } from '@/hooks/useUser'
 import { authApi } from '@/lib/api'
 
-import Navbar from '@/components/Navbar'
+import LoadingState from '@/components/LoadingState'
+import PageHeader from '@/components/PageHeader'
 import { Avatar, AvatarFallback } from '@/components/ui/avatar'
 import { Button } from '@/components/ui/button'
 import {
@@ -22,7 +23,6 @@ import { Input } from '@/components/ui/input'
 import { Label } from '@/components/ui/label'
 
 import {
-	ArrowLeft,
 	LoaderIcon,
 	Lock,
 	Mail,
@@ -58,14 +58,7 @@ export default function ProfilePage() {
 	if (isError) return null
 
 	if (userLoading || !user) {
-		return (
-			<div className='flex h-screen flex-col items-center justify-center bg-muted/20 gap-4'>
-				<LoaderIcon className='size-10 animate-spin text-primary' />
-				<p className='text-lg font-medium text-muted-foreground animate-pulse'>
-					Sahifa yuklanmoqda...
-				</p>
-			</div>
-		)
+		return <LoadingState message='Sahifa yuklanmoqda...' />
 	}
 
 	const handleChange = e => {
@@ -87,15 +80,10 @@ export default function ProfilePage() {
 
 		try {
 			const updatedUser = await authApi.updateProfile(updateData)
-
-			// Update the local SWR cache immediately
 			mutate(updatedUser, false)
-
 			toast.success('Profil muvaffaqiyatli yangilandi!', {
 				style: { background: '#16A34A', color: '#fff' },
 			})
-
-			// Parol hammasi toza bo'lishi uchun xonani tozalaymiz
 			setFormData(prev => ({ ...prev, password: '' }))
 		} catch (error) {
 			toast.error(error.message || 'Xatolik yuz berdi', {
@@ -107,27 +95,14 @@ export default function ProfilePage() {
 	}
 
 	return (
-		<div className='min-h-screen bg-muted/20 flex flex-col font-sans'>
-			<Navbar user={user} />
-
+		<div className='min-h-screen bg-muted/20 flex flex-col font-sans pb-24'>
 			<main className='flex-1 w-full max-w-3xl mx-auto p-4 md:p-8'>
-				<div className='flex items-center gap-4 mb-8'>
-					<Button
-						variant='outline'
-						size='icon'
-						className='rounded-xl shadow-sm hover:bg-muted transition-colors h-10 w-10'
-						onClick={() => router.push('/')}
-					>
-						<ArrowLeft className='h-5 w-5' />
-					</Button>
-					<div>
-						<h1 className='text-2xl font-bold tracking-tight text-foreground'>
-							Profil Sozlamalari
-						</h1>
-						<p className='text-sm text-muted-foreground font-medium mt-1'>
-							Shaxsiy ma'lumotlaringizni boshqaring.
-						</p>
-					</div>
+				<div className='mb-8'>
+					<PageHeader
+						title='Profil Sozlamalari'
+						subtitle="Shaxsiy ma'lumotlaringizni boshqaring."
+						backHref='/'
+					/>
 				</div>
 
 				<Card className='shadow-lg border-border/50 bg-background/60 backdrop-blur-xl overflow-hidden rounded-2xl'>

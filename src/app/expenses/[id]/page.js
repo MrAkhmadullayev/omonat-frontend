@@ -9,84 +9,25 @@ import useSWR from 'swr'
 
 import { useUser } from '@/hooks/useUser'
 import { expenseApi } from '@/lib/api'
+import { CATEGORY_MAP } from '@/lib/constants'
+import { formatCardNumber, formatMoney } from '@/lib/formatters'
 
-import Navbar from '@/components/Navbar'
+import ConfirmDialog from '@/components/ConfirmDialog'
+import ErrorState from '@/components/ErrorState'
+import LoadingState from '@/components/LoadingState'
+import PageHeader from '@/components/PageHeader'
 import { Badge } from '@/components/ui/badge'
 import { Button } from '@/components/ui/button'
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card'
 
-import {
-	AlertCircle,
-	ArrowLeft,
-	Calendar,
-	Car,
-	CreditCard,
-	Home,
-	LoaderIcon,
-	Plus,
-	Settings,
-	ShoppingBag,
-	Tag,
-	Trash2,
-	Utensils,
-	Wallet,
-} from 'lucide-react'
-
-const formatMoney = (amount, currency = 'UZS') => {
-	return new Intl.NumberFormat('uz-UZ', {
-		style: 'currency',
-		currency,
-		maximumFractionDigits: 0,
-	}).format(amount || 0)
-}
-
-const formatCardNumber = number => {
-	if (!number) return '**** **** **** ****'
-	const cleaned = ('' + number).replace(/\D/g, '')
-	const match = cleaned.match(/.{1,4}/g)
-	return match ? match.join(' ') : cleaned
-}
-
-const categoryMap = {
-	food: {
-		label: 'Oziq-ovqat',
-		icon: Utensils,
-		color:
-			'bg-orange-100 text-orange-600 dark:bg-orange-900/30 dark:text-orange-400',
-		border: 'border-orange-200 dark:border-orange-900',
-	},
-	transport: {
-		label: 'Transport',
-		icon: Car,
-		color: 'bg-blue-100 text-blue-600 dark:bg-blue-900/30 dark:text-blue-400',
-		border: 'border-blue-200 dark:border-blue-900',
-	},
-	shopping: {
-		label: 'Xaridlar',
-		icon: ShoppingBag,
-		color: 'bg-pink-100 text-pink-600 dark:bg-pink-900/30 dark:text-pink-400',
-		border: 'border-pink-200 dark:border-pink-900',
-	},
-	house: {
-		label: 'Uy-joy',
-		icon: Home,
-		color:
-			'bg-purple-100 text-purple-600 dark:bg-purple-900/30 dark:text-purple-400',
-		border: 'border-purple-200 dark:border-purple-900',
-	},
-	services: {
-		label: 'Xizmatlar',
-		icon: Settings,
-		color: 'bg-slate-100 text-slate-600 dark:bg-slate-800 dark:text-slate-300',
-		border: 'border-slate-200 dark:border-slate-700',
-	},
-}
+import { Calendar, CreditCard, Plus, Tag, Trash2, Wallet } from 'lucide-react'
 
 export default function ExpenseDetailPage() {
 	const { id } = useParams()
 	const router = useRouter()
 	const { user, isLoading: userLoading, isError } = useUser()
 	const [isDeleting, setIsDeleting] = useState(false)
+	const [showDeleteDialog, setShowDeleteDialog] = useState(false)
 
 	const {
 		data: expense,
@@ -101,7 +42,6 @@ export default function ExpenseDetailPage() {
 	}, [isError, router])
 
 	const handleDelete = async () => {
-		if (!confirm("Haqiqatan ham bu xarajatni o'chirmoqchimisiz?")) return
 		try {
 			setIsDeleting(true)
 			await expenseApi.delete(id)
@@ -114,6 +54,7 @@ export default function ExpenseDetailPage() {
 				style: { background: '#DC2626', color: '#fff' },
 			})
 			setIsDeleting(false)
+			setShowDeleteDialog(false)
 		}
 	}
 
@@ -121,36 +62,26 @@ export default function ExpenseDetailPage() {
 
 	if (userLoading || expenseLoading || isDeleting) {
 		return (
-			<div className='flex h-screen flex-col items-center justify-center bg-muted/20 gap-4'>
-				<LoaderIcon className='size-10 animate-spin text-foreground' />
-				<p className='text-lg font-medium text-muted-foreground animate-pulse'>
-					{isDeleting
+			<LoadingState
+				message={
+					isDeleting
 						? "O'chirilmoqda..."
-						: "Xarajat ma'lumotlari yuklanmoqda..."}
-				</p>
-			</div>
+						: "Xarajat ma'lumotlari yuklanmoqda..."
+				}
+			/>
 		)
 	}
 
 	if (expenseError || !expense) {
 		return (
-			<div className='flex h-screen flex-col items-center justify-center bg-muted/20 gap-4'>
-				<AlertCircle className='size-12 text-muted-foreground/50' />
-				<div className='text-xl font-bold text-foreground'>
-					Ma'lumot topilmadi
-				</div>
-				<Button
-					variant='outline'
-					onClick={() => router.push('/expenses')}
-					className='mt-2 rounded-xl'
-				>
-					Orqaga qaytish
-				</Button>
-			</div>
+			<ErrorState
+				message="Ma'lumot topilmadi"
+				onRetry={() => router.push('/expenses')}
+			/>
 		)
 	}
 
-	const catInfo = categoryMap[expense.category] || {
+	const catInfo = CATEGORY_MAP[expense.category] || {
 		label: expense.category,
 		icon: Plus,
 		color: 'bg-muted text-muted-foreground',
@@ -159,27 +90,14 @@ export default function ExpenseDetailPage() {
 	const CategoryIcon = catInfo.icon
 
 	return (
-		<div className='min-h-screen bg-muted/20 flex flex-col font-sans'>
-			<Navbar user={user} />
-
+		<div className='min-h-screen bg-muted/20 flex flex-col font-sans pb-24'>
 			<main className='flex-1 w-full max-w-5xl mx-auto p-4 md:p-8'>
-				<div className='flex items-center gap-4 mb-8'>
-					<Button
-						variant='outline'
-						size='icon'
-						className='rounded-xl shadow-sm hover:bg-muted transition-colors'
-						onClick={() => router.push('/expenses')}
-					>
-						<ArrowLeft className='h-5 w-5' />
-					</Button>
-					<div>
-						<h1 className='text-2xl font-bold tracking-tight text-foreground'>
-							Xarajat tafsilotlari
-						</h1>
-						<p className='text-sm text-muted-foreground font-medium mt-1'>
-							To'liq ma'lumotlar va tarix
-						</p>
-					</div>
+				<div className='mb-8'>
+					<PageHeader
+						title='Xarajat tafsilotlari'
+						subtitle="To'liq ma'lumotlar va tarix"
+						backHref='/expenses'
+					/>
 				</div>
 
 				<div className='grid grid-cols-1 lg:grid-cols-3 gap-6 lg:gap-8'>
@@ -249,7 +167,9 @@ export default function ExpenseDetailPage() {
 										</div>
 										<div className='relative z-10 mb-4'>
 											<p className='text-2xl font-mono tracking-[0.15em] text-white/95 drop-shadow-md'>
-												{formatCardNumber(expense.cardNumber)}
+												{expense.cardNumber
+													? formatCardNumber(expense.cardNumber)
+													: '**** **** **** ****'}
 											</p>
 										</div>
 										<div className='flex justify-between items-end relative z-10'>
@@ -312,7 +232,7 @@ export default function ExpenseDetailPage() {
 								<Button
 									variant='destructive'
 									className='w-full rounded-xl font-bold tracking-wide h-11'
-									onClick={handleDelete}
+									onClick={() => setShowDeleteDialog(true)}
 									disabled={isDeleting}
 								>
 									<Trash2 className='w-4 h-4 mr-2' />
@@ -323,6 +243,17 @@ export default function ExpenseDetailPage() {
 					</div>
 				</div>
 			</main>
+
+			<ConfirmDialog
+				open={showDeleteDialog}
+				onOpenChange={setShowDeleteDialog}
+				title="Xarajatni o'chirish"
+				description="Haqiqatan ham bu xarajatni o'chirmoqchimisiz? Bu amalni qaytarib bo'lmaydi."
+				confirmLabel="O'chirish"
+				onConfirm={handleDelete}
+				isLoading={isDeleting}
+				variant='destructive'
+			/>
 		</div>
 	)
 }

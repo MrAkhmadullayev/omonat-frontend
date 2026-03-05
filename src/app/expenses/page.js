@@ -9,8 +9,14 @@ import useSWR from 'swr'
 
 import { useUser } from '@/hooks/useUser'
 import { expenseApi } from '@/lib/api'
+import { CATEGORY_MAP } from '@/lib/constants'
+import { formatMoney } from '@/lib/formatters'
 
-import Navbar from '@/components/Navbar'
+import ConfirmDialog from '@/components/ConfirmDialog'
+import ErrorState from '@/components/ErrorState'
+import LoadingState from '@/components/LoadingState'
+import PageHeader from '@/components/PageHeader'
+import StatsCard from '@/components/StatsCard'
 import { Badge } from '@/components/ui/badge'
 import { Button } from '@/components/ui/button'
 import {
@@ -39,74 +45,27 @@ import {
 } from '@/components/ui/table'
 
 import {
-	AlertCircle,
-	ArrowLeft,
 	Banknote,
 	Calendar,
-	Car,
 	CreditCard,
 	Edit,
 	Eye,
 	Filter,
-	Home,
-	LoaderIcon,
 	MoreVertical,
 	Plus,
 	Search,
-	Settings,
 	ShoppingBag,
 	Trash2,
-	Utensils,
+	TrendingUp,
 	Wallet,
 } from 'lucide-react'
-
-const formatMoney = (amount, currency = 'UZS') => {
-	return new Intl.NumberFormat('uz-UZ', {
-		style: 'currency',
-		currency,
-		maximumFractionDigits: 0,
-	}).format(amount || 0)
-}
-
-const categoryMap = {
-	food: {
-		label: 'Oziq-ovqat',
-		icon: Utensils,
-		color:
-			'bg-orange-100 text-orange-600 dark:bg-orange-900/30 dark:text-orange-400',
-		border: 'border-orange-200 dark:border-orange-900',
-	},
-	transport: {
-		label: 'Transport',
-		icon: Car,
-		color: 'bg-blue-100 text-blue-600 dark:bg-blue-900/30 dark:text-blue-400',
-		border: 'border-blue-200 dark:border-blue-900',
-	},
-	shopping: {
-		label: 'Xaridlar',
-		icon: ShoppingBag,
-		color: 'bg-pink-100 text-pink-600 dark:bg-pink-900/30 dark:text-pink-400',
-		border: 'border-pink-200 dark:border-pink-900',
-	},
-	house: {
-		label: 'Uy-joy',
-		icon: Home,
-		color:
-			'bg-purple-100 text-purple-600 dark:bg-purple-900/30 dark:text-purple-400',
-		border: 'border-purple-200 dark:border-purple-900',
-	},
-	services: {
-		label: 'Xizmatlar',
-		icon: Settings,
-		color: 'bg-slate-100 text-slate-600 dark:bg-slate-800 dark:text-slate-300',
-		border: 'border-slate-200 dark:border-slate-700',
-	},
-}
 
 export default function ExpensesPage() {
 	const router = useRouter()
 	const { user, isLoading: isUserLoading, isError } = useUser()
 	const [searchQuery, setSearchQuery] = useState('')
+	const [deleteTarget, setDeleteTarget] = useState(null)
+	const [isDeleting, setIsDeleting] = useState(false)
 
 	const {
 		data: expenses = [],
@@ -122,47 +81,25 @@ export default function ExpensesPage() {
 	if (isError) return null
 
 	if (isUserLoading || isExpensesLoading || !user) {
-		return (
-			<div className='flex h-screen flex-col items-center justify-center bg-muted/20 gap-4'>
-				<LoaderIcon className='size-10 animate-spin text-primary' />
-				<p className='text-lg font-medium text-muted-foreground animate-pulse'>
-					Xarajatlar yuklanmoqda...
-				</p>
-			</div>
-		)
+		return <LoadingState message='Xarajatlar yuklanmoqda...' />
 	}
 
 	if (expensesError) {
-		return (
-			<div className='flex h-screen flex-col items-center justify-center gap-4 bg-muted/20'>
-				<AlertCircle className='size-12 text-muted-foreground/50' />
-				<p className='text-xl font-bold text-red-600'>Tarmoq xatoligi!</p>
-				<p className='text-muted-foreground font-medium'>
-					{expensesError.message}
-				</p>
-				<Button
-					onClick={() => window.location.reload()}
-					variant='outline'
-					className='mt-2 rounded-xl'
-				>
-					Sahifani yangilash
-				</Button>
-			</div>
-		)
+		return <ErrorState message={expensesError.message} />
 	}
 
-	const handleDelete = async id => {
-		if (!confirm("Haqiqatan ham bu xarajatni o'chirmoqchimisiz?")) return
+	const handleDelete = async () => {
+		if (!deleteTarget) return
+		setIsDeleting(true)
 		try {
-			await expenseApi.delete(id)
-			toast.success("Xarajat muvaffaqiyatli o'chirildi", {
-				style: { background: '#16A34A', color: '#fff' },
-			})
+			await expenseApi.delete(deleteTarget)
+			toast.success("Xarajat muvaffaqiyatli o'chirildi")
 			mutate()
 		} catch (error) {
-			toast.error(error.message || 'Xatolik yuz berdi', {
-				style: { background: '#DC2626', color: '#fff' },
-			})
+			toast.error(error.message || 'Xatolik yuz berdi')
+		} finally {
+			setIsDeleting(false)
+			setDeleteTarget(null)
 		}
 	}
 
@@ -182,85 +119,55 @@ export default function ExpensesPage() {
 		.reduce((sum, e) => sum + e.amount, 0)
 
 	return (
-		<div className='min-h-screen bg-muted/20 flex flex-col font-sans'>
-			<Navbar user={user} />
-
+		<div className='min-h-screen bg-muted/20 flex flex-col font-sans pb-24'>
 			<main className='flex-1 w-full max-w-7xl mx-auto p-4 md:p-8'>
-				<div className='flex flex-col gap-4 md:flex-row md:items-center md:justify-between mb-8'>
-					<div className='flex items-center gap-4'>
+				<div className='mb-8'>
+					<PageHeader
+						title='Xarajatlar royxati'
+						subtitle='Pullaringiz qayerga sarflanayotganini kuzating.'
+						backHref='/'
+					>
 						<Button
 							variant='outline'
-							size='icon'
-							className='rounded-xl shadow-sm hover:bg-muted transition-colors'
-							onClick={() => router.push('/')}
+							className='flex-1 md:flex-none rounded-xl gap-2 h-11 transition-all font-bold hover:bg-muted'
+							onClick={() => router.push('/expenses/reports')}
 						>
-							<ArrowLeft className='h-5 w-5' />
+							<TrendingUp className='h-4 w-4 text-primary' /> Hisobotlar
 						</Button>
-						<div>
-							<h1 className='text-2xl font-bold tracking-tight text-foreground'>
-								Xarajatlar ro'yxati
-							</h1>
-							<p className='text-sm text-muted-foreground font-medium mt-1'>
-								Pullaringiz qayerga sarflanayotganini kuzating.
-							</p>
-						</div>
-					</div>
-					<Button
-						className='w-full md:w-auto rounded-xl shadow-md gap-2 h-11 transition-all font-bold'
-						onClick={() => router.push('/expenses/add')}
-					>
-						<Plus className='h-5 w-5' /> Yangi xarajat qo'shish
-					</Button>
+						<Button
+							className='flex-1 md:flex-none rounded-xl shadow-md gap-2 h-11 transition-all font-bold'
+							onClick={() => router.push('/expenses/add')}
+						>
+							<Plus className='h-5 w-5' /> Yangi
+						</Button>
+					</PageHeader>
 				</div>
 
 				<div className='grid gap-4 md:grid-cols-3 mb-8'>
-					<Card className='hover:shadow-md transition-all duration-300 border-border/50 bg-background/60 backdrop-blur-sm'>
-						<CardHeader className='flex flex-row items-center justify-between pb-2'>
-							<CardTitle className='text-sm font-bold text-muted-foreground uppercase tracking-wider'>
-								Jami xarajat (bu oy)
-							</CardTitle>
-							<div className='p-2 bg-muted rounded-full border border-border/50'>
-								<Banknote className='h-4 w-4 text-foreground' />
-							</div>
-						</CardHeader>
-						<CardContent>
-							<div className='text-2xl font-black text-foreground'>
-								{formatMoney(totalThisMonth)}
-							</div>
-						</CardContent>
-					</Card>
-
-					<Card className='hover:shadow-md transition-all duration-300 border-border/50 bg-background/60 backdrop-blur-sm'>
-						<CardHeader className='flex flex-row items-center justify-between pb-2'>
-							<CardTitle className='text-sm font-bold text-muted-foreground uppercase tracking-wider'>
-								Kartadan chiqim
-							</CardTitle>
-							<div className='p-2 bg-blue-50 dark:bg-blue-900/20 rounded-full border border-blue-100 dark:border-blue-900/30'>
-								<CreditCard className='h-4 w-4 text-blue-600' />
-							</div>
-						</CardHeader>
-						<CardContent>
-							<div className='text-2xl font-black text-blue-600'>
-								{formatMoney(cardPayments)}
-							</div>
-						</CardContent>
-					</Card>
-
-					<Card className='hover:shadow-md transition-all duration-300 border-border/50 bg-background/60 backdrop-blur-sm'>
-						<CardHeader className='flex flex-row items-center justify-between pb-2'>
-							<CardTitle className='text-sm font-bold text-muted-foreground uppercase tracking-wider'>
-								Naqd chiqim
-							</CardTitle>
-							<div className='p-2 bg-green-50 dark:bg-green-900/20 rounded-full border border-green-100 dark:border-green-900/30'>
-								<Wallet className='h-4 w-4 text-green-600' />
-							</div>
-						</CardHeader>
-						<CardContent>
-							<div className='text-2xl font-black text-green-600'>
-								{formatMoney(cashPayments)}
-							</div>
-						</CardContent>
-					</Card>
+					<StatsCard
+						title='Jami xarajat (bu oy)'
+						value={formatMoney(totalThisMonth)}
+						icon={Banknote}
+						animated={false}
+					/>
+					<StatsCard
+						title='Kartadan chiqim'
+						value={formatMoney(cardPayments)}
+						valueColor='text-blue-600'
+						icon={CreditCard}
+						iconBg='bg-blue-50 dark:bg-blue-900/20'
+						iconColor='text-blue-600'
+						animated={false}
+					/>
+					<StatsCard
+						title='Naqd chiqim'
+						value={formatMoney(cashPayments)}
+						valueColor='text-green-600'
+						icon={Wallet}
+						iconBg='bg-green-50 dark:bg-green-900/20'
+						iconColor='text-green-600'
+						animated={false}
+					/>
 				</div>
 
 				<Card className='mb-8 border-border/50 shadow-sm bg-background/60 backdrop-blur-sm'>
@@ -318,7 +225,7 @@ export default function ExpensesPage() {
 								<TableBody>
 									{filteredExpenses.length > 0 ? (
 										filteredExpenses.map(exp => {
-											const catInfo = categoryMap[exp.category] || {
+											const catInfo = CATEGORY_MAP[exp.category] || {
 												label: exp.category,
 												icon: Plus,
 												color: 'bg-muted text-muted-foreground',
@@ -331,7 +238,7 @@ export default function ExpensesPage() {
 													className='hover:bg-muted/40 transition-colors group'
 												>
 													<TableCell className='pl-6'>
-														<div className='flex items-center gap-2 text-xs font-semibold text-muted-foreground'>
+														<div className='flex items-center gap-2 text-[13px] font-semibold text-muted-foreground'>
 															<Calendar className='h-3.5 w-3.5' />
 															{format(new Date(exp.date), 'dd MMM, yyyy', {
 																locale: uz,
@@ -353,18 +260,18 @@ export default function ExpensesPage() {
 														<div className='flex flex-col items-start gap-1'>
 															<Badge
 																variant='outline'
-																className='text-[11px] font-bold uppercase tracking-wider bg-background'
+																className='text-xs font-bold uppercase tracking-wider bg-background'
 															>
 																{exp.method === 'card' ? 'Karta' : 'Naqd'}
 															</Badge>
 															{exp.method === 'card' && exp.cardNumber && (
-																<span className='text-[10px] text-muted-foreground font-mono font-medium'>
+																<span className='text-[11px] text-muted-foreground font-mono font-medium'>
 																	*{exp.cardNumber.slice(-4)}
 																</span>
 															)}
 														</div>
 													</TableCell>
-													<TableCell className='text-right font-black text-red-600'>
+													<TableCell className='text-right font-black text-destructive'>
 														-{formatMoney(exp.amount, 'UZS')}
 													</TableCell>
 													<TableCell className='pr-4 text-right'>
@@ -409,9 +316,9 @@ export default function ExpensesPage() {
 																</DropdownMenuItem>
 																<DropdownMenuSeparator />
 																<DropdownMenuItem
-																	className='cursor-pointer py-2 text-red-600 focus:bg-red-50 focus:text-red-600 dark:focus:bg-red-950/30 font-bold'
+																	className='cursor-pointer py-2 text-red-600 focus:bg-red-50 focus:text-red-600 dark:focus:bg-red-950/30 dark:focus:text-red-400 font-bold'
 																	onClick={() =>
-																		handleDelete(exp._id || exp.id)
+																		setDeleteTarget(exp._id || exp.id)
 																	}
 																>
 																	<Trash2 className='mr-2 h-4 w-4' /> O'chirish
@@ -443,6 +350,17 @@ export default function ExpensesPage() {
 					</CardContent>
 				</Card>
 			</main>
+
+			<ConfirmDialog
+				open={!!deleteTarget}
+				onOpenChange={open => !open && setDeleteTarget(null)}
+				title="Xarajatni o'chirish"
+				description="Haqiqatan ham bu xarajatni o'chirmoqchimisiz? Bu amalni qaytarib bo'lmaydi."
+				confirmLabel="O'chirish"
+				onConfirm={handleDelete}
+				isLoading={isDeleting}
+				variant='destructive'
+			/>
 		</div>
 	)
 }

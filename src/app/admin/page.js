@@ -1,5 +1,7 @@
 'use client'
 
+import ErrorState from '@/components/ErrorState'
+import StatsCard from '@/components/StatsCard'
 import { Button } from '@/components/ui/button'
 import {
 	Card,
@@ -8,25 +10,12 @@ import {
 	CardHeader,
 	CardTitle,
 } from '@/components/ui/card'
+import { Skeleton } from '@/components/ui/skeleton'
 import { adminApi } from '@/lib/api'
-import {
-	ArrowRight,
-	CreditCard,
-	LoaderIcon,
-	Receipt,
-	Users,
-	Wallet,
-} from 'lucide-react'
+import { formatMoney } from '@/lib/formatters'
+import { ArrowRight, CreditCard, Receipt, Users, Wallet } from 'lucide-react'
 import Link from 'next/link'
 import useSWR from 'swr'
-
-const formatMoney = amount => {
-	return new Intl.NumberFormat('uz-UZ', {
-		style: 'currency',
-		currency: 'UZS',
-		maximumFractionDigits: 0,
-	}).format(amount)
-}
 
 export default function AdminDashboard() {
 	const {
@@ -37,18 +26,39 @@ export default function AdminDashboard() {
 
 	if (isLoading) {
 		return (
-			<div className='flex h-64 items-center justify-center'>
-				<LoaderIcon className='size-8 animate-spin text-primary' />
+			<div className='space-y-8'>
+				<Skeleton className='h-9 w-64' />
+				<div className='grid gap-4 md:grid-cols-2 lg:grid-cols-4'>
+					{[1, 2, 3, 4].map(i => (
+						<Card key={i} className='border-border/50'>
+							<CardHeader className='flex flex-row items-center justify-between space-y-0 pb-2'>
+								<Skeleton className='h-4 w-32' />
+								<Skeleton className='h-4 w-4 rounded-full' />
+							</CardHeader>
+							<CardContent>
+								<Skeleton className='h-8 w-40 mb-2' />
+								<Skeleton className='h-3 w-24' />
+							</CardContent>
+						</Card>
+					))}
+				</div>
+				<div className='grid gap-4 md:grid-cols-1 lg:grid-cols-2'>
+					<Card className='col-span-1 border-border/50'>
+						<CardHeader>
+							<Skeleton className='h-6 w-40 mb-2' />
+							<Skeleton className='h-4 w-72' />
+						</CardHeader>
+						<CardContent className='space-y-4'>
+							<Skeleton className='h-10 w-full rounded-md' />
+						</CardContent>
+					</Card>
+				</div>
 			</div>
 		)
 	}
 
 	if (error) {
-		return (
-			<div className='p-8 text-center text-red-500'>
-				Xatolik yuz berdi: {error.message}
-			</div>
-		)
+		return <ErrorState message={error.message} />
 	}
 
 	return (
@@ -60,69 +70,43 @@ export default function AdminDashboard() {
 			</div>
 
 			<div className='grid gap-4 md:grid-cols-2 lg:grid-cols-4'>
-				<Card className='hover:shadow-lg transition-all'>
-					<CardHeader className='flex flex-row items-center justify-between space-y-0 pb-2'>
-						<CardTitle className='text-sm font-medium'>
-							Jami Foydalanuvchilar
-						</CardTitle>
-						<Users className='h-4 w-4 text-muted-foreground' />
-					</CardHeader>
-					<CardContent>
-						<div className='text-2xl font-bold'>{stats.totalUsers}</div>
-						<p className='text-xs text-muted-foreground'>Faol hisoblar</p>
-					</CardContent>
-				</Card>
-
-				<Card className='hover:shadow-lg transition-all'>
-					<CardHeader className='flex flex-row items-center justify-between space-y-0 pb-2'>
-						<CardTitle className='text-sm font-medium'>
-							Jami Berilgan Qarzlar
-						</CardTitle>
-						<CreditCard className='h-4 w-4 text-red-500' />
-					</CardHeader>
-					<CardContent>
-						<div className='text-2xl font-bold text-red-600'>
-							{formatMoney(stats.totalDebt)}
-						</div>
-						<p className='text-xs text-muted-foreground'>
-							To'langan: {formatMoney(stats.totalDebtPaid)}
-						</p>
-					</CardContent>
-				</Card>
-
-				<Card className='hover:shadow-lg transition-all'>
-					<CardHeader className='flex flex-row items-center justify-between space-y-0 pb-2'>
-						<CardTitle className='text-sm font-medium'>
-							Jami Kutilayotgan Haqlar
-						</CardTitle>
-						<Wallet className='h-4 w-4 text-blue-500' />
-					</CardHeader>
-					<CardContent>
-						<div className='text-2xl font-bold text-blue-600'>
-							{formatMoney(stats.totalReceivable)}
-						</div>
-						<p className='text-xs text-muted-foreground'>
-							Olingan: {formatMoney(stats.totalReceivableReceived)}
-						</p>
-					</CardContent>
-				</Card>
-
-				<Card className='hover:shadow-lg transition-all'>
-					<CardHeader className='flex flex-row items-center justify-between space-y-0 pb-2'>
-						<CardTitle className='text-sm font-medium'>
-							Jami Sarflangan Xarajatlar
-						</CardTitle>
-						<Receipt className='h-4 w-4 text-orange-500' />
-					</CardHeader>
-					<CardContent>
-						<div className='text-2xl font-bold text-orange-600'>
-							{formatMoney(stats.totalExpense)}
-						</div>
-						<p className='text-xs text-muted-foreground'>
-							Tizimdagi umumiy sarf
-						</p>
-					</CardContent>
-				</Card>
+				<StatsCard
+					title='Jami Foydalanuvchilar'
+					value={stats.totalUsers}
+					icon={Users}
+					subtitle='Faol hisoblar'
+					animated={false}
+				/>
+				<StatsCard
+					title='Jami Berilgan Qarzlar'
+					value={formatMoney(stats.totalDebt)}
+					valueColor='text-red-600'
+					icon={CreditCard}
+					iconBg='bg-red-100/80 dark:bg-red-900/30'
+					iconColor='text-red-500'
+					subtitle={`To'langan: ${formatMoney(stats.totalDebtPaid)}`}
+					animated={false}
+				/>
+				<StatsCard
+					title='Jami Kutilayotgan Haqlar'
+					value={formatMoney(stats.totalReceivable)}
+					valueColor='text-blue-600'
+					icon={Wallet}
+					iconBg='bg-blue-100/80 dark:bg-blue-900/30'
+					iconColor='text-blue-500'
+					subtitle={`Olingan: ${formatMoney(stats.totalReceivableReceived)}`}
+					animated={false}
+				/>
+				<StatsCard
+					title='Jami Sarflangan Xarajatlar'
+					value={formatMoney(stats.totalExpense)}
+					valueColor='text-orange-600'
+					icon={Receipt}
+					iconBg='bg-orange-100/80 dark:bg-orange-900/30'
+					iconColor='text-orange-500'
+					subtitle='Tizimdagi umumiy sarf'
+					animated={false}
+				/>
 			</div>
 
 			<div className='grid gap-4 md:grid-cols-1 lg:grid-cols-2'>

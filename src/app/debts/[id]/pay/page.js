@@ -2,16 +2,18 @@
 
 import { format } from 'date-fns'
 import { uz } from 'date-fns/locale'
+import { motion } from 'framer-motion'
 import { useParams, useRouter } from 'next/navigation'
-import { useEffect, useState } from 'react'
+import { useEffect, useState, useTransition } from 'react'
 import { toast } from 'sonner'
 import useSWR from 'swr'
 
 import { useUser } from '@/hooks/useUser'
 import { debtApi } from '@/lib/api'
+import { PAGE_VARIANTS } from '@/lib/constants'
+import { formatMoney } from '@/lib/formatters'
 import { cn } from '@/lib/utils'
 
-import Navbar from '@/components/Navbar'
 import { Button } from '@/components/ui/button'
 import { Calendar } from '@/components/ui/calendar'
 import { Card, CardContent, CardFooter } from '@/components/ui/card'
@@ -22,6 +24,7 @@ import {
 	PopoverContent,
 	PopoverTrigger,
 } from '@/components/ui/popover'
+import { Skeleton } from '@/components/ui/skeleton'
 import { Textarea } from '@/components/ui/textarea'
 
 import {
@@ -30,22 +33,15 @@ import {
 	Banknote,
 	CalendarIcon,
 	CheckCircle2,
-	LoaderIcon,
+	Loader2,
 	Wallet,
 } from 'lucide-react'
-
-const formatMoney = (amount, currency = 'UZS') => {
-	return new Intl.NumberFormat('uz-UZ', {
-		style: 'currency',
-		currency,
-		maximumFractionDigits: 0,
-	}).format(amount || 0)
-}
 
 export default function PayDebtPage() {
 	const { id } = useParams()
 	const router = useRouter()
 	const { user, isLoading: userLoading, isError } = useUser()
+	const [isPending, startTransition] = useTransition()
 
 	const [payAmount, setPayAmount] = useState('')
 	const [date, setDate] = useState(new Date())
@@ -55,37 +51,86 @@ export default function PayDebtPage() {
 		data: debt,
 		error: debtError,
 		isLoading: debtLoading,
-	} = useSWR(user && id ? `/debts/${id}` : null, () => debtApi.getById(id))
+	} = useSWR(user && id ? `/debts/${id}` : null, () => debtApi.getById(id), {
+		revalidateOnFocus: true,
+	})
 
 	useEffect(() => {
 		if (isError) router.push('/authentication/login')
 	}, [isError, router])
 
-	if (isError) return null
+	const navigate = path => {
+		startTransition(() => {
+			router.push(path)
+		})
+	}
 
-	if (userLoading || debtLoading) {
+	if (userLoading || debtLoading || !user) {
 		return (
-			<div className='flex h-screen flex-col items-center justify-center bg-muted/20 gap-4'>
-				<LoaderIcon className='size-8 animate-spin text-primary' />
-				<p className='text-base font-medium text-muted-foreground animate-pulse'>
-					To'lov sahifasi yuklanmoqda...
-				</p>
+			<div className='min-h-screen bg-muted/20 flex flex-col font-sans pb-24'>
+				<main className='flex-1 w-full max-w-2xl mx-auto p-4 md:p-8'>
+					<div className='flex items-center gap-4 mb-6'>
+						<Skeleton className='h-9 w-9 rounded-lg' />
+						<div>
+							<Skeleton className='h-6 w-32 mb-1.5' />
+							<Skeleton className='h-3 w-48' />
+						</div>
+					</div>
+					<Card className='border-border/50 bg-background/60 shadow-sm rounded-xl overflow-hidden'>
+						<div className='bg-primary/5 border-b border-primary/10 p-5 flex flex-col sm:flex-row sm:items-center justify-between gap-4'>
+							<div className='space-y-2'>
+								<Skeleton className='h-3 w-40' />
+								<Skeleton className='h-8 w-32' />
+							</div>
+							<Skeleton className='h-9 w-24 rounded-lg' />
+						</div>
+						<CardContent className='p-5 sm:p-6 space-y-6'>
+							<div className='space-y-2'>
+								<Skeleton className='h-4 w-32' />
+								<Skeleton className='h-12 w-full rounded-lg' />
+							</div>
+							<div className='space-y-2'>
+								<Skeleton className='h-4 w-24' />
+								<Skeleton className='h-11 w-full rounded-lg' />
+							</div>
+							<div className='space-y-2'>
+								<Skeleton className='h-4 w-16' />
+								<Skeleton className='h-20 w-full rounded-lg' />
+							</div>
+						</CardContent>
+						<CardFooter className='border-t border-border/50 p-5 justify-end gap-3'>
+							<Skeleton className='h-10 w-24 rounded-lg' />
+							<Skeleton className='h-10 w-32 rounded-lg' />
+						</CardFooter>
+					</Card>
+				</main>
 			</div>
 		)
 	}
 
 	if (debtError || !debt) {
 		return (
-			<div className='flex h-screen flex-col items-center justify-center bg-muted/20 gap-4'>
-				<AlertCircle className='size-10 text-muted-foreground/50' />
-				<div className='text-lg font-bold text-foreground'>
-					Ma'lumot topilmadi
+			<div className='flex flex-1 flex-col items-center justify-center p-6 text-center min-h-[60vh]'>
+				<div className='w-16 h-16 bg-red-100 text-red-600 rounded-full flex items-center justify-center mb-4 ring-8 ring-red-50'>
+					<AlertCircle className='w-8 h-8' />
 				</div>
+				<h2 className='text-xl font-bold mb-2 text-foreground'>
+					Ma'lumot topilmadi
+				</h2>
+				<p className='text-muted-foreground mb-6'>
+					Kechirasiz, siz qidirayotgan qarz ma'lumoti topilmadi.
+				</p>
 				<Button
 					variant='outline'
-					onClick={() => router.push('/debts')}
-					className='mt-2 rounded-lg'
+					onClick={() => navigate('/debts')}
+					className='rounded-xl font-semibold px-8'
+					disabled={isPending}
 				>
+					{isPending ? (
+						<Loader2 className='h-4 w-4 mr-2 animate-spin' />
+					) : (
+						<ArrowLeft className='h-4 w-4 mr-2' />
+					)}
 					Orqaga qaytish
 				</Button>
 			</div>
@@ -103,7 +148,14 @@ export default function PayDebtPage() {
 		if (value) {
 			if (Number(value) > remainingAmount) {
 				value = remainingAmount.toString()
-				toast.info("Qoldiqdan ortiqcha to'lay olmaysiz", { duration: 3000 })
+				toast.info("Qoldiqdan ortiqcha to'lay olmaysiz", {
+					duration: 3000,
+					style: {
+						background: '#fffbeb',
+						color: '#b45309',
+						border: '1px solid #fde68a',
+					},
+				})
 			}
 			setPayAmount(
 				parseInt(value, 10).toLocaleString('ru-RU').replace(/,/g, ' '),
@@ -134,53 +186,69 @@ export default function PayDebtPage() {
 			await debtApi.pay(id, paymentData)
 
 			toast.success("To'lov muvaffaqiyatli qabul qilindi!", {
-				position: 'top-right',
-				style: { background: '#16A34A', color: '#fff' },
+				position: 'top-center',
+				style: {
+					background: '#ecfdf5',
+					color: '#16a34a',
+					border: '1px solid #6ee7b7',
+				},
 			})
 
-			router.push(`/debts/${id}`)
+			navigate(`/debts/${id}`)
 		} catch (error) {
 			toast.error(error.message || 'Xatolik yuz berdi', {
-				position: 'top-right',
-				style: { background: '#DC2626', color: '#fff' },
+				position: 'top-center',
+				style: {
+					background: '#fee2e2',
+					color: '#dc2626',
+					border: '1px solid #f87171',
+				},
 			})
 			setIsSubmitting(false)
 		}
 	}
 
 	return (
-		<div className='min-h-screen bg-muted/20 flex flex-col font-sans'>
-			<Navbar user={user} />
-
-			<main className='flex-1 w-full max-w-2xl mx-auto p-4 md:p-8'>
+		<div className='min-h-screen bg-muted/20 flex flex-col font-sans pb-24'>
+			<motion.main
+				initial='hidden'
+				animate='show'
+				variants={PAGE_VARIANTS}
+				className='flex-1 w-full max-w-2xl mx-auto p-4 md:p-8'
+			>
 				<div className='flex items-center gap-4 mb-6'>
 					<Button
 						variant='outline'
 						size='icon'
-						className='rounded-lg shadow-sm hover:bg-muted transition-colors h-9 w-9'
-						onClick={() => router.push(`/debts/${id}`)}
+						className='rounded-lg shadow-sm hover:bg-primary hover:text-primary-foreground hover:border-primary transition-colors h-9 w-9'
+						onClick={() => navigate(`/debts/${id}`)}
+						disabled={isPending || isSubmitting}
 					>
-						<ArrowLeft className='h-4 w-4' />
+						{isPending ? (
+							<Loader2 className='h-4 w-4 animate-spin' />
+						) : (
+							<ArrowLeft className='h-4 w-4' />
+						)}
 					</Button>
 					<div>
-						<h1 className='text-xl font-bold tracking-tight text-foreground'>
+						<h1 className='text-xl md:text-2xl font-bold tracking-tight text-foreground'>
 							Qarzni uzish
 						</h1>
-						<p className='text-xs text-muted-foreground font-medium mt-0.5 uppercase tracking-wider'>
+						<p className='text-xs md:text-sm text-muted-foreground font-medium mt-0.5 uppercase tracking-wider'>
 							{debt.creditorName} ga to'lov qilish
 						</p>
 					</div>
 				</div>
 
-				<Card className='shadow-md hover:shadow-lg transition-shadow duration-300 border-border/50 bg-background/60 backdrop-blur-xl overflow-hidden rounded-xl'>
+				<Card className='shadow-sm hover:shadow-md transition-shadow duration-300 border-border/50 bg-background/80 backdrop-blur-xl overflow-hidden rounded-xl'>
 					<form onSubmit={handleSubmit}>
 						<div className='bg-primary/5 dark:bg-primary/10 border-b border-primary/10 p-5 flex flex-col sm:flex-row sm:items-center justify-between gap-4'>
 							<div className='space-y-1'>
-								<p className='text-xs font-semibold text-muted-foreground uppercase tracking-wider flex items-center gap-1.5'>
-									<Wallet className='h-3.5 w-3.5' /> To'lanishi kerak bo'lgan
-									qoldiq
+								<p className='text-xs font-bold text-muted-foreground uppercase tracking-wider flex items-center gap-1.5'>
+									<Wallet className='h-3.5 w-3.5 text-primary' /> To'lanishi
+									kerak bo'lgan qoldiq
 								</p>
-								<p className='text-2xl font-black text-primary drop-shadow-sm'>
+								<p className='text-2xl md:text-3xl font-black text-primary tracking-tight'>
 									{formatMoney(remainingAmount, debt.currency)}
 								</p>
 							</div>
@@ -188,23 +256,24 @@ export default function PayDebtPage() {
 								type='button'
 								variant='outline'
 								size='sm'
-								className='rounded-lg border-primary/30 text-primary hover:bg-primary/10 font-bold tracking-wide shadow-sm'
+								className='rounded-lg border-primary/30 text-primary hover:bg-primary/10 font-bold tracking-wide shadow-sm h-9 px-4'
 								onClick={handlePayFullRemaining}
+								disabled={isSubmitting || isPending}
 							>
 								To'liq uzish
 							</Button>
 						</div>
 
-						<CardContent className='p-5 sm:p-6 space-y-6'>
+						<CardContent className='p-5 sm:p-6 space-y-5 sm:space-y-6'>
 							<div className='grid gap-2.5'>
 								<Label
 									htmlFor='payAmount'
-									className='text-sm font-semibold text-foreground'
+									className='text-sm font-bold text-foreground'
 								>
 									Qancha to'layapsiz? <span className='text-red-500'>*</span>
 								</Label>
 								<div className='relative group'>
-									<div className='absolute left-3 top-1/2 -translate-y-1/2 text-muted-foreground group-focus-within:text-green-600 transition-colors'>
+									<div className='absolute left-3.5 top-1/2 -translate-y-1/2 text-muted-foreground group-focus-within:text-green-600 transition-colors'>
 										<Banknote className='h-5 w-5' />
 									</div>
 									<Input
@@ -212,18 +281,18 @@ export default function PayDebtPage() {
 										value={payAmount}
 										onChange={handleAmountChange}
 										placeholder='Masalan: 500 000'
-										className='h-12 pl-10 pr-12 text-lg font-bold text-green-600 rounded-lg border-border/50 shadow-sm transition-all focus-visible:ring-green-500 focus-visible:border-green-500'
+										className='h-12 pl-11 pr-16 text-lg font-black text-green-600 rounded-lg border-border/50 shadow-sm transition-all focus-visible:ring-green-500 focus-visible:border-green-500 bg-background/50'
 										required
-										disabled={isSubmitting}
+										disabled={isSubmitting || isPending}
 									/>
-									<div className='absolute right-3 top-1/2 -translate-y-1/2 text-sm font-bold text-muted-foreground uppercase'>
+									<div className='absolute right-4 top-1/2 -translate-y-1/2 text-xs font-black text-muted-foreground uppercase tracking-wider'>
 										{debt.currency}
 									</div>
 								</div>
 							</div>
 
 							<div className='grid gap-2.5'>
-								<Label className='text-sm font-semibold text-foreground'>
+								<Label className='text-sm font-bold text-foreground'>
 									To'lov sanasi <span className='text-red-500'>*</span>
 								</Label>
 								<Popover>
@@ -231,12 +300,12 @@ export default function PayDebtPage() {
 										<Button
 											variant='outline'
 											className={cn(
-												'w-full h-11 justify-start text-left font-medium rounded-lg border-border/50 shadow-sm transition-all',
+												'w-full h-11 justify-start text-left font-medium rounded-lg border-border/50 shadow-sm bg-background/50 hover:bg-muted',
 												!date && 'text-muted-foreground',
 											)}
-											disabled={isSubmitting}
+											disabled={isSubmitting || isPending}
 										>
-											<CalendarIcon className='mr-2 h-4 w-4' />
+											<CalendarIcon className='mr-2.5 h-4 w-4 opacity-70' />
 											{date ? (
 												format(date, 'PPP', { locale: uz })
 											) : (
@@ -244,7 +313,10 @@ export default function PayDebtPage() {
 											)}
 										</Button>
 									</PopoverTrigger>
-									<PopoverContent className='w-auto p-0' align='start'>
+									<PopoverContent
+										className='w-auto p-0 rounded-xl shadow-xl border-border/50'
+										align='start'
+									>
 										<Calendar
 											mode='single'
 											selected={date}
@@ -258,7 +330,7 @@ export default function PayDebtPage() {
 							<div className='grid gap-2.5'>
 								<Label
 									htmlFor='note'
-									className='text-sm font-semibold text-foreground'
+									className='text-sm font-bold text-foreground'
 								>
 									Izoh (Ixtiyoriy)
 								</Label>
@@ -267,29 +339,29 @@ export default function PayDebtPage() {
 									name='note'
 									placeholder='Masalan: Plastik kartadan tashlab berdim...'
 									rows={3}
-									disabled={isSubmitting}
-									className='resize-none text-sm p-3 rounded-lg border-border/50 shadow-sm transition-all'
+									disabled={isSubmitting || isPending}
+									className='resize-none text-sm p-3 rounded-lg border-border/50 shadow-sm bg-background/50 focus-visible:ring-primary/50'
 								/>
 							</div>
 						</CardContent>
 
-						<CardFooter className='flex flex-col-reverse sm:flex-row justify-end gap-3 border-t border-border/50 p-5 bg-muted/10 backdrop-blur-sm'>
+						<CardFooter className='flex flex-col-reverse sm:flex-row justify-end gap-3 border-t border-border/50 p-4 sm:p-5 bg-muted/5 backdrop-blur-sm rounded-b-xl'>
 							<Button
 								type='button'
 								variant='ghost'
-								className='w-full sm:w-auto h-10 rounded-lg font-semibold hover:bg-muted'
-								onClick={() => router.push(`/debts/${id}`)}
-								disabled={isSubmitting}
+								className='w-full sm:w-auto h-10 rounded-lg font-semibold hover:bg-muted text-muted-foreground transition-colors'
+								onClick={() => navigate(`/debts/${id}`)}
+								disabled={isSubmitting || isPending}
 							>
 								Bekor qilish
 							</Button>
 							<Button
 								type='submit'
-								disabled={isSubmitting || !payAmount}
-								className='w-full sm:w-auto h-10 px-6 rounded-lg font-bold tracking-wide gap-2 bg-green-600 hover:bg-green-700 text-white shadow-sm hover:shadow-md transition-all'
+								disabled={isSubmitting || !payAmount || isPending}
+								className='w-full sm:w-auto h-10 px-6 rounded-lg font-bold tracking-wide gap-2 bg-green-600 hover:bg-green-700 text-white shadow-sm hover:shadow-md transition-all active:scale-95'
 							>
 								{isSubmitting ? (
-									<LoaderIcon className='h-4 w-4 animate-spin' />
+									<Loader2 className='h-4 w-4 animate-spin' />
 								) : (
 									<CheckCircle2 className='h-4 w-4' />
 								)}
@@ -298,7 +370,7 @@ export default function PayDebtPage() {
 						</CardFooter>
 					</form>
 				</Card>
-			</main>
+			</motion.main>
 		</div>
 	)
 }

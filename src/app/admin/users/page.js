@@ -3,6 +3,7 @@
 import { Button } from '@/components/ui/button'
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card'
 import { Input } from '@/components/ui/input'
+import { Skeleton } from '@/components/ui/skeleton'
 import {
 	Table,
 	TableBody,
@@ -13,8 +14,8 @@ import {
 } from '@/components/ui/table'
 import { adminApi } from '@/lib/api'
 import {
+	AlertCircle,
 	ExternalLink,
-	LoaderIcon,
 	Search,
 	ShieldAlert,
 	ShieldCheck,
@@ -35,16 +36,71 @@ export default function UsersList() {
 
 	if (isLoading) {
 		return (
-			<div className='flex h-64 items-center justify-center'>
-				<LoaderIcon className='size-8 animate-spin text-primary' />
+			<div className='space-y-6'>
+				{/* Header skeleton */}
+				<div className='flex flex-col gap-4 md:flex-row md:items-center md:justify-between'>
+					<Skeleton className='h-9 w-56' />
+					<Skeleton className='h-10 w-full md:w-64 rounded-md' />
+				</div>
+
+				{/* Table card skeleton */}
+				<Card className='border-border/50'>
+					<CardHeader>
+						<Skeleton className='h-6 w-52' />
+					</CardHeader>
+					<CardContent>
+						<div className='space-y-0'>
+							{/* Header row */}
+							<div className='grid grid-cols-4 gap-4 pb-3 border-b border-border/50'>
+								<Skeleton className='h-4 w-12' />
+								<Skeleton className='h-4 w-24' />
+								<Skeleton className='h-4 w-14' />
+								<Skeleton className='h-4 w-16 ml-auto' />
+							</div>
+							{/* Data rows */}
+							{[1, 2, 3, 4, 5].map(i => (
+								<div
+									key={i}
+									className='grid grid-cols-4 gap-4 py-4 border-b border-border/30 items-center'
+								>
+									<Skeleton className='h-5 w-28' />
+									<div className='space-y-1.5'>
+										<Skeleton className='h-4 w-28' />
+										<Skeleton className='h-3 w-36' />
+									</div>
+									<Skeleton className='h-6 w-24 rounded-full' />
+									<div className='flex gap-2 justify-end'>
+										<Skeleton className='h-8 w-20 rounded-md' />
+										<Skeleton className='h-8 w-20 rounded-md' />
+									</div>
+								</div>
+							))}
+						</div>
+					</CardContent>
+				</Card>
 			</div>
 		)
 	}
 
 	if (error) {
 		return (
-			<div className='p-8 text-center text-red-500'>
-				Xatolik: {error.message}
+			<div className='flex flex-1 flex-col items-center justify-center p-8 text-center min-h-[50vh]'>
+				<div className='w-16 h-16 bg-red-100 dark:bg-red-900/30 text-destructive rounded-full flex items-center justify-center mb-4 ring-8 ring-red-50 dark:ring-red-900/10'>
+					<AlertCircle className='w-8 h-8' />
+				</div>
+				<h2 className='text-xl font-bold mb-2 text-foreground'>
+					Xatolik yuz berdi
+				</h2>
+				<p className='text-sm text-muted-foreground mb-6 max-w-sm'>
+					{error.message || 'Foydalanuvchilarni yuklashda muammo yuzaga keldi.'}
+				</p>
+				<Button
+					onClick={() => window.location.reload()}
+					size='lg'
+					className='rounded-xl font-bold px-8 shadow-lg shadow-primary/20'
+				>
+					Qayta urinib ko'rish
+				</Button>
 			</div>
 		)
 	}

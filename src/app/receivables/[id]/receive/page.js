@@ -9,9 +9,9 @@ import useSWR from 'swr'
 
 import { useUser } from '@/hooks/useUser'
 import { receivableApi } from '@/lib/api'
+import { formatMoney } from '@/lib/formatters'
 import { cn } from '@/lib/utils'
 
-import Navbar from '@/components/Navbar'
 import { Button } from '@/components/ui/button'
 import { Calendar } from '@/components/ui/calendar'
 import { Card, CardContent, CardFooter } from '@/components/ui/card'
@@ -33,14 +33,6 @@ import {
 	LoaderIcon,
 	Wallet,
 } from 'lucide-react'
-
-const formatMoney = (amount, currency = 'UZS') => {
-	return new Intl.NumberFormat('uz-UZ', {
-		style: 'currency',
-		currency,
-		maximumFractionDigits: 0,
-	}).format(amount || 0)
-}
 
 export default function ReceivePaymentPage() {
 	const { id } = useParams()
@@ -151,9 +143,7 @@ export default function ReceivePaymentPage() {
 	}
 
 	return (
-		<div className='min-h-screen bg-muted/20 flex flex-col font-sans'>
-			<Navbar user={user} />
-
+		<div className='min-h-screen bg-muted/20 flex flex-col font-sans pb-24'>
 			<main className='flex-1 w-full max-w-2xl mx-auto p-4 md:p-8'>
 				<div className='flex items-center gap-4 mb-6'>
 					<Button

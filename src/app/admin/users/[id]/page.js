@@ -8,27 +8,21 @@ import {
 	CardHeader,
 	CardTitle,
 } from '@/components/ui/card'
+import { Skeleton } from '@/components/ui/skeleton'
 import { adminApi } from '@/lib/api'
+import { formatMoney } from '@/lib/formatters'
 import { format } from 'date-fns'
 import { uz } from 'date-fns/locale'
 import {
+	AlertCircle,
 	ArrowLeft,
 	CreditCard,
-	LoaderIcon,
 	Receipt,
 	Wallet,
 } from 'lucide-react'
 import Link from 'next/link'
 import { useParams } from 'next/navigation'
 import useSWR from 'swr'
-
-const formatMoney = amount => {
-	return new Intl.NumberFormat('uz-UZ', {
-		style: 'currency',
-		currency: 'UZS',
-		maximumFractionDigits: 0,
-	}).format(amount)
-}
 
 export default function UserDetail() {
 	const { id } = useParams()
@@ -39,16 +33,72 @@ export default function UserDetail() {
 
 	if (isLoading) {
 		return (
-			<div className='flex h-screen items-center justify-center'>
-				<LoaderIcon className='size-10 animate-spin text-primary' />
+			<div className='space-y-8'>
+				{/* Header skeleton */}
+				<div className='flex items-center gap-4'>
+					<Skeleton className='h-10 w-10 rounded-full' />
+					<div>
+						<Skeleton className='h-9 w-48 mb-2' />
+						<Skeleton className='h-4 w-64' />
+					</div>
+				</div>
+
+				{/* 3 cards skeleton */}
+				<div className='grid gap-6 lg:grid-cols-3'>
+					{[1, 2, 3].map(i => (
+						<Card key={i} className='lg:col-span-1 border-border/50'>
+							<CardHeader className='flex flex-row items-center justify-between'>
+								<div>
+									<Skeleton className='h-5 w-20 mb-2' />
+									<Skeleton className='h-3 w-40' />
+								</div>
+								<Skeleton className='h-5 w-5 rounded-full' />
+							</CardHeader>
+							<CardContent>
+								<div className='space-y-4'>
+									{[1, 2, 3].map(j => (
+										<div
+											key={j}
+											className='flex items-center justify-between border-b border-border/30 pb-3 last:border-0'
+										>
+											<div className='space-y-1.5'>
+												<Skeleton className='h-4 w-28' />
+												<Skeleton className='h-3 w-20' />
+											</div>
+											<div className='space-y-1.5 text-right'>
+												<Skeleton className='h-5 w-24 ml-auto' />
+												<Skeleton className='h-3 w-20 ml-auto' />
+											</div>
+										</div>
+									))}
+								</div>
+							</CardContent>
+						</Card>
+					))}
+				</div>
 			</div>
 		)
 	}
 
 	if (error) {
 		return (
-			<div className='p-8 text-center text-red-500'>
-				Xatolik: {error.message}
+			<div className='flex flex-1 flex-col items-center justify-center p-8 text-center min-h-[50vh]'>
+				<div className='w-16 h-16 bg-red-100 dark:bg-red-900/30 text-destructive rounded-full flex items-center justify-center mb-4 ring-8 ring-red-50 dark:ring-red-900/10'>
+					<AlertCircle className='w-8 h-8' />
+				</div>
+				<h2 className='text-xl font-bold mb-2 text-foreground'>
+					Xatolik yuz berdi
+				</h2>
+				<p className='text-sm text-muted-foreground mb-6 max-w-sm'>
+					{error.message || "Ma'lumotlarni yuklashda muammo yuzaga keldi."}
+				</p>
+				<Button
+					onClick={() => window.location.reload()}
+					size='lg'
+					className='rounded-xl font-bold px-8 shadow-lg shadow-primary/20'
+				>
+					Qayta urinib ko'rish
+				</Button>
 			</div>
 		)
 	}
